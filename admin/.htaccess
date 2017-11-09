@@ -1,0 +1,5 @@
+AuthName "ARM DB"
+AuthType CAS
+Require valid-user
+Allow from all
+Satisfy all

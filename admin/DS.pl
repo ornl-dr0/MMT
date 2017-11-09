@@ -1,0 +1,763 @@
+#!/usr/bin/perl 
+
+use CGI qw(:cgi-lib);
+ReadParse();
+use DBI;
+use PGMMT_lib;
+use Time::Local;
+use JSON;
+use POSIX qw(strftime);
+my $VROOT=$ENV{'VROOT'};
+my $remote_user=$ENV{'REMOTE_USER'};
+my $query = new CGI;
+$query->charset('UTF-8');
+my $json = new JSON();
+my $user = &get_user;
+my $password= &get_pwd;
+my $peopletab = &get_peopletab;
+my $grouprole = &get_grouprole;
+my $dbname = &get_dbname;
+my $statustab = &get_statustab;
+my $archivedb = &get_archivedb;
+my $webserver=&get_webserver;
+my $remote_user=$ENV{'REMOTE_USER'};
+my $statustab = &get_statustab;
+my $dbserver = &get_dbserver;
+my $instrclasstoinstrcattab = &get_instrclasstoinstrcattab; #user table
+my $pmcodetomeascatalllower = &get_pmcodetomeascatalllower; # user table
+my $pmcodetomeassubcatalllower = &get_pmcodetomeassubcatalllower; #user table
+my $dsinfotab = &get_dsinfotab; #user table
+my $dsvarnameinfotab = &get_dsvarnameinfotab; #user table
+my $dsvarnamemeascatstab = &get_dsvarnamemeascatstab; #user table
+my $instrcodedetailstab = &get_instrcodedetailstab; #user table
+my $instrcodetoinstrclasstab = &get_instrcodetoinstrclasstab; #user table
+my $dsinfotab = &get_dsinfotab; #user table
+my $dsvarnameinfotab = &get_dsvarnameinfotab; #user table
+my $dsvarnamemeascatstab = &get_dsvarnamemeascatstab; #user table
+my $instrclassdetailstab = &get_instrclassdetailstab; #user table
+my $sub_date = strftime('%Y%m%d%H%M', localtime());
+my $subyr=substr($sub_date,0,4);
+my $submon=substr($sub_date,4,2);
+my $subday=substr($sub_date,6,2);
+my $subhour=substr($sub_date,8,2);
+my $submin=substr($sub_date,10,2);
+my $submitDate="$submon"."/"."$subday"."/"."$subyr"." "."$subhour".":"."$submin";
+
+# here is the access to the MMT database
+my $dsn = "DBI:Pg:dbname=arm_xdc;host=$dbserver;port=5432";
+my $userid = $user;
+my $password=$password;
+my $dbh = DBI->connect($dsn,$userid,$password,  {'RaiseError'=> 1}) or die $DBI::errstr; 
+
+#*******************************************************************************
+print $query->header;
+print "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n";
+print "<html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"en\">\n";
+print "<head>\n";
+print "<title>MMT: Datastream</title>\n";
+print "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=UTF-8\"/>\n";
+print "<link rel=\"stylesheet\" type=\"text/css\" href=\"/shared/arm_basic.css\" />\n";
+print "<style type=\"text/css\" media=\"screen\"><!-- \@import \"/shared/arm_adv.css\"; --></style>\n";
+print "<link rel=\"stylesheet\" type=\"text/css\" href=\"/shared/arm_print.css\" media=\"print\" />\n";
+print "<style type=\"text/css\" media=\"screen\"><!-- \@import \"/shared/fc.css\"; --></style>\n";
+print "<style type=\"text/css\" media=\"all\">\n";
+print "#content {margin-right:0;background-image: none;}\n";
+print "</style>\n";
+print '<style type="text/css">
+table,th,td {
+	border:1px solid black;
+	cellspacing:10px;
+}
+</style>
+';
+print '<style type="text/css">
+P {text-indent: 30pt;
+}
+</style>
+';
+print '<style type="text/css">
+p {text-indent: 0pt;
+}
+</style>
+';
+print "</head>\n";
+print '<body class=\"iops\">';
+print '<div id="content">';
+print "<form method=\"post\" name=\"MMT\" action=\"DS.pl\" enctype=\"multipart/form-data\">\n";
+if ($remote_user ne "") {
+	$sth_getuser=$dbh->prepare("SELECT person_id,name_first,name_last from $peopletab where upper(user_name)=upper('$remote_user')");
+	if (!defined $sth_getuser) { die "Cannot prepare statement: $DBI::errstr\n"; }
+        $sth_getuser->execute;
+        while ($getuser = $sth_getuser->fetch) {
+		$user_first=$getuser->[1];
+		$user_last=$getuser->[2];
+		$user_id=$getuser->[0];
+	}
+} else {
+	print "You are not logged into the MMT<p>\n";
+	my $id="";
+	&bottomlinks($id,"");
+	$dbh->disconnect();
+	exit;
+}
+&toplinks($user_id,$user_first,$user_last,"DS");
+$process="";
+$last="";
+$numofsites=0;
+$last_name="";
+$dsBase="";
+$dsBaseDesc="";
+$dataLevel="";
+$dsClass="";
+$filespd="";
+$exptfs="";
+$accptmin="";
+$accptmax="";
+$estsamppd="";
+$exptdellag="";
+$procblksze="";
+$type="";
+$submit=$in{submit};
+if ($dsBase eq "") {
+	if ($in{dsBase} ne "") {
+		$dsBase=$in{dsBase};
+	}
+}
+if ($dataLevel eq "") {
+	if ($in{dataLevel} ne "") {
+		$dataLevel=$in{dataLevel};
+	}
+	
+}
+if ($dsClass eq "") {
+	if ($in{dsClass} ne "") {
+		@tempdsclass=();
+		@tempdsclass=split(/\./,$in{dsClass});
+		$dsBase=$tempdsclass[0];
+		$dataLevel=$tempdsclass[1];
+	}
+}
+if (($dsBase ne "") && ($dataLevel ne "") && ($submit eq "")) {
+	$submit="Check it";
+}
+if ($dsBaseDesc eq "") {
+	if ($in{dsBaseDesc} ne "") {
+		$dsBaseDesc=$in{dsBaseDesc};
+	}
+}
+if ($process eq "") {
+	if ($in{process} ne "") {
+		$process = $in{process};
+	}
+}
+$now=&getnow;
+print "<hr>\n";
+if ($submit eq "RESET") {
+	$dsBase="";
+}
+if ($in{IDNo} ne "") {
+	$IDNo=$in{IDNo};
+} else {
+	$IDNo="";
+}
+
+if (($dsBase eq "") || ($submit eq "RESET")) {
+	print "<strong>Enter/Update ARM DataStream Metadata</strong><p>\n";
+	if ($in{IDNo} ne "") {
+		$IDNo=$in{IDNo};
+		
+		$sth_getboddetails = $dbh->prepare("SELECT dsBase,dataLevel,dsBaseDesc,submitter,statusFlag from DS where IDNo=$IDNo");
+		if (!defined $sth_getboddetails) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       	 	$sth_getboddetails->execute;
+        	while ($getboddetails = $sth_getboddetails->fetch) {	
+			$dsBase=$getboddetails->[0];
+			$dataLevel=$getboddetails->[1];
+			$dsBaseDesc=$getboddetails->[2];
+			$Bstat=$getboddetails->[4];
+		}
+	} else {
+		$IDNo="";
+	}
+	if ($submit ne "RESET") {
+		if ($in{dsBase} ne "") {
+			$dsBase=$in{dsBase};
+		} 
+		if ($in{dataLevel} ne "") {
+			$dataLevel=$in{dataLevel};
+		}
+		if ($in{dsBaseDesc} ne "") {
+			$dsBaseDesc=$in{dsBaseDesc};
+		} 
+
+		$last=$in{last};
+		if ($submit eq "Check it") {
+			if (($dsBase ne "") && ($dataLevel ne "")) {
+				$type=$submit;
+			} else {
+				$type="";
+			}
+			$submit="NEW/MOD DS";
+		}
+
+		if ($person_id ne "") {
+			print "<input type=\"HIDDEN\" NAME=\"person_id\" value=\"$person_id\" />\n";
+		}
+
+	}
+}
+if ($submit eq "Submit") {
+	if (($dsBase eq "") || ($dsBaseDesc eq "") || ($dataLevel eq ""))  {
+		print " Instrument Code, Data Level and Datastream Class Description (Instrument Code Name) are required fields.<br />\n";
+		print "<hr align=\"left\" size=\"1\" />\n";
+		print '</div>';
+		$dbh->disconnect();
+		exit;
+	}
+	$countmatch=0;
+	$sth_checkds=$dbh->prepare("SELECT count(*),count(*) from DS where dsBase='$dsBase' and dataLevel='$dataLevel'");
+	if (!defined $sth_checkds) { die "Cannot prepare statement: $DBI::errstr\n"; }
+        $sth_checkds->execute;
+        while ($checkds = $sth_checkds->fetch) {
+		$countmatch = $checkds->[0];
+	}	
+	if ($countmatch > 0) {
+		$sth_getid=$dbh->prepare("SELECT max(IDNo),max(IDNo) from DS where dsBase='$dsBase' and dataLevel='$dataLevel'");
+		if (!defined $sth_getid) { die "Cannot prepare statement: $DBI::errstr\n"; }
+        	$sth_getid->execute;
+        	if ($IDNo eq "") {
+        		while ($getid = $sth_getid->fetch) {
+				$IDNo=$getid->[0];
+			}
+		}
+	}
+	if ($IDNo ne "") {
+		print "<input type=\"HIDDEN\" NAME=\"IDNo\" value=\"$IDNo\" />\n";
+	}
+	if ($dsBase ne "") {
+		print "<input type=\"HIDDEN\" NAME=\"dsBase\" value=\"$dsBase\" />\n";
+	}
+	if ($dataLevel ne "") {
+		print "<input type=\"HIDDEN\" NAME=\"dataLevel\" value=\"$dataLevel\" />\n";
+	}
+	if ($dsBaseDesc ne "") {
+		print "<input type=\"HIDDEN\" NAME=\"dsBaseDesc\" value=\"$dsBaseDesc\" />\n";
+	}
+	if ($process ne "") {
+		print "<input type=\"HIDDEN\" NAME=\"process\" value=\"$process\" />\n";
+	}
+	$lclast=lc $user_last;
+	$lcfirst=lc $user_first;
+	$affil="";
+	$city="";
+	$state="";
+	$country="";
+	
+	$sth_getemail=$dbh->prepare("SELECT DISTINCT name_first,name_last,email,person_id,affiliation,city,state,country FROM $peopletab WHERE person_id=$user_id");
+	if (!defined $sth_getemail) { die "Cannot prepare statement: $DBI::errstr\n"; }
+        $sth_getemail->execute;
+        while ($getemail = $sth_getemail->fetch) {	
+		$emailaddr=$getemail->[2];
+		$affil=$getemail->[4];
+		$city=$getemail->[5];
+		$state=$getemail->[6];
+		$country=$getemail->[7];
+	}
+	$newdsBase="";
+	$newdsBase="\'$dsBase\'";
+	$newdsBaseDesc="";
+	$newdsBaseDesc="\'$dsBaseDesc\'";
+	$newdataLevel="";
+	$newdataLevel="\'$dataLevel\'";
+	if (($process eq "Bn") || ($process eq "Ma")) {
+		$existbod = 0;
+	} else {
+		$existbod = 1;
+	}
+	$REVstat=0;
+	if (($existbod == 0) && ($process ne "")) {
+		if ($process eq "Bn") {
+			$DBstat=0;
+		}
+		if ($process eq "Ma") {
+			$DBstat=1;
+		}
+	} else {
+		$DBstat=1;
+	}
+	$type="DS";
+	$now=&getnow;
+	if ($IDNo eq "") {
+		$doStatus = $dbh->do("INSERT INTO IDs values(DEFAULT,'$type',$DBstat,$REVstat,'$now')");
+		if ( ! defined $doStatus ) {
+			print "<hr />\n";
+			print "An error has occurred during insert. Please try again<br />\n";
+			$dbh->disconnect();
+			exit;
+		}
+	}
+	# retrieve the IDNo which was created by insert above (identity field)
+	$new=1;
+	if ($IDNo eq "") {
+		$IDNo="";
+		
+		$sth_getIDNo=$dbh->prepare("SELECT IDNo,type,entry_date from IDs where type='$type' and DBstatus=$DBstat and revStatus=$REVstat and entry_date='$now'");
+		if (!defined $sth_getIDNo) { die "Cannot prepare statement: $DBI::errstr\n"; }
+        	$sth_getIDNo->execute;
+        	while ($getIDNo = $sth_getIDNo->fetch) {		
+			$IDNo=$getIDNo->[0];
+		}
+		# Insert DS, otherContacts records
+		$doStatus = $dbh->do("INSERT INTO DS (IDNo,submitter,submitDate,dsBase,dataLevel,dsBaseDesc,statusFlag) values ($IDNo,$user_id,'$submitDate',$newdsBase,$newdataLevel,$newdsBaseDesc,$DBstat)");
+		if ( ! defined $doStatus ) {
+			print "<hr />\n";
+			print "An error has occurred during entry (DS table). <br>\n";
+			print "Please check your input and try again<br />\n";
+			$dbh->disconnect();
+			exit;
+		}					
+	} else {
+		$new=0;
+		$doStatus = $dbh->do("UPDATE DS set dsBaseDesc=$newdsBaseDesc,statusFlag=$DBstat where IDNo=$IDNo");
+		if ( ! defined $doStatus ) {
+			print "<hr />\n";
+			print "An error has occurred during update (DS table). <br>\n";
+			print "Please check your input and try again<br />\n";
+			$dbh->disconnect();
+			exit;
+		}	
+	}
+	# insert a review status record for all reviewers (standard and supplemental) if this is a new DS
+	$revidarray=();
+	$countr=0;
+	
+	$sth_getrid=$dbh->prepare("SELECT person_id,person_id from reviewers order by person_id");
+	if (!defined $sth_getrid) { die "Cannot prepare statement: $DBI::errstr\n"; }
+        $sth_getrid->execute;
+        while ($getrid = $sth_getrid->fetch) {	
+		$revidarray[$countr]=$getrid->[0];
+		$countr = $countr + 1;
+	}
+	@sortedrevidarray=();
+	@sortedrevidarray=sort @revidarray;
+	$oldrid="";
+	$countrevstat=0;
+	$sth_checkrevstat=$dbh->prepare("SELECT count(*),count(*) from reviewerStatus where IDNo=$IDNo");
+	if (!defined $sth_checkrevstat) { die "Cannot prepare statement: $DBI::errstr\n"; }
+        $sth_checkrevstat->execute;
+        while ($checkrevstat = $sth_checkrevstat->fetch) {		
+		$countrevstat=$checkrevstat->[0];
+	}
+	if ($countrevstat == 0) {
+	foreach $srevid (@sortedrevidarray) {
+		if ($oldrid ne $srevid) {
+			$doStatus = $dbh->do("INSERT into reviewerStatus (IDNo,person_id,status,statusDate) values ($IDNo,$srevid,0,'$submitDate')");
+			if ( ! defined $doStatus) {
+				print "<hr />\n";
+				print "An error has occurred during entry (reviewerStatus table). Please try again<br />\n";
+				$dbh->disconnect();
+				exit;
+			}
+			$oldrid=$srevid;
+		}
+	}
+	}
+	if ($DBstat == 0) {
+		print "MMT: new datastream proposed.<br />\n";
+	}
+	if ($DBstat == 1) {
+		print "MMT: modification to an existing datastream proposed.<br />\n";
+	}
+	if (($process eq "Ma") || ($process eq "Mba") || ($process eq "Bn")) {
+		#need to get existing metadata from archive and fill mmt db with it for a start!
+		if ($dataLevel =~ 'c') {
+			$sourcecheck='deriv';
+		} elsif (($dataLevel =~ 'a') || ($dataLevel =~ 'b')) {
+			$sourcecheck='obs';
+		} else {
+			$sourcecheck='';
+		}
+		$sourceClass="";
+		
+		$sth_getsource=$dbh->prepare("SELECT distinct instrument_code,source_class_code from $archivedb.$dsinfotab WHERE instrument_code='$dsBase'");
+		if (!defined $sth_getsource) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       	 	$sth_getsource->execute;
+       	 	while ($getsource = $sth_getsource->fetch) {		
+			$sourceClass=$getsource->[1];
+		}
+		$countclass=0;
+		$instClass="";
+		$instClassName="";
+		$icstat=1;
+		
+		$sth_getdsdetails=$dbh->prepare("SELECT distinct instrument_class_code,instrument_class_name from $archivedb.$instrclassdetailstab where instrument_class_code in (SELECT distinct instrument_class_code from $archivedb.$instrcodetoinstrclasstab where instrument_code in (SELECT distinct instrument_code from $archivedb.$dsinfotab where instrument_code='$dsBase' and source_class_code like '%$sourcecheck'))");
+		if (!defined $sth_getdsdetails) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       	 	$sth_getdsdetails->execute;
+       	 	while ($getdsdetails = $sth_getdsdetails->fetch) {	
+			$instClass=$getdsdetails->[0];
+			$instClassName=$getdsdetails->[0];
+			$countclass = $countclass + 1;
+		}
+		if ($countclass == 0) {
+			$mmtid="";
+			#check mmt for metadata associated with dsbase and datalevel
+	
+			$sth_checkDOD=$dbh->prepare("SELECT distinct IDNo,IDNo from DOD where dsBase='$dsBase' and dataLevel='$dataLevel'");
+			if (!defined $sth_checkDOD) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       	 		$sth_checkDOD->execute;
+       	 		while ($checkDOD = $sth_checkDOD->fetch) {			
+				$mmtid=$checkDOD->[0];
+				
+				$sth_checkic=$dbh->prepare("SELECT distinct instrument_class,instrument_class_name from instClass where IDNo=$checkDOD->[0]");
+				if (!defined $sth_checkic) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       	 			$sth_checkic->execute;
+       	 			while ($checkic = $sth_checkic->fetch) {	
+					$instClass=$checkic->[0];
+					$instClassName=$checkic->[1];
+					$countclass = $countclass + 1;
+					$icstat=0;
+				}
+			}
+		}
+		if ($countclass == 1) {
+			# all is well - one instrument class returned - add metadata!
+			$doStatus = $dbh->do("INSERT INTO instClass (IDNo,submitter,instrument_class,instrument_class_name,statusFlag) values ($IDNo,$user_id,'$instClass','$instClassName',$icstat)");
+			if ( ! defined $doStatus ) {
+				print "<hr />\n";
+				print "An error has occurred during insert into instClass table. Please try again<br />\n";
+				$dbh->disconnect();
+				exit;
+			}
+			@instCats=();
+			$countcde=0;
+			if ($icstat == 1) {				
+				$sth_getinstcodes=$dbh->prepare("SELECT distinct instrument_class_code,instrument_category_code from $archivedb.$instrclasstoinstrcattab WHERE instrument_class_code='$instClass'");
+				if (!defined $sth_getinstcodes) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       	 			$sth_getinstcodes->execute;
+       	 			while ($getinstcodes = $sth_getinstcodes->fetch) {
+					$instCats[$countcde]=$getinstcodes->[1];
+					$doStatus = $dbh->do("INSERT INTO instCats (IDNo,submitter,inst_category_code,statusFlag) values ($IDNo,$user_id,\'$getinstcodes->[1]\',1)");
+					if ( ! defined $doStatus ) {
+						print "<hr />\n";
+						print "An error has occurred during insert into instCats table. Please try again<br />\n";
+						$dbh->disconnect();
+						exit;
+					}
+					$countcde = $countcde + 1;
+				}
+				$doStatus = $dbh->do("INSERT INTO sourceClass (IDNo,submitter,source_class,statusFlag) values ($IDNo,$user_id,'$sourceClass',1)");
+				if ( ! defined $doStatus ) {
+					print "<hr />\n";
+					print "An error has occurred during insert into sourceClass table. Please try again<br />\n";
+					$dbh->disconnect();
+					exit;
+				}
+			} else {
+			
+				$sth_getmmtic=$dbh->prepare("SELECT distinct instClass.IDNo,instClass.IDNo from instClass,IDs where instClass.IDNo=IDs.IDNo and IDs.type='I' and instrument_class='$instClass'");
+				if (!defined $sth_getmmtic) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       	 			$sth_getmmtic->execute;
+       	 			while ($getmmtic = $sth_getmmtic->fetch) {
+					$sth_getinstcodes=$dbh->prepare("SELECT distinct inst_category_code,inst_category_code from instCats where IDNo=$getmmtic->[0]");
+					if (!defined $sth_getinstcodes) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       	 				$sth_getinstcodes->execute;
+       	 				while ($getinstcodes = $sth_getinstcodes->fetch) {
+						$instCats[$countcde]=$getinstcodes->[1];
+						$doStatus = $dbh->do("INSERT INTO instCats (IDNo,submitter,inst_category_code,statusFlag) values ($IDNo,$user_id,'$getinstcodes->[1]',1)");
+						if ( ! defined $doStatus ) {
+							print "<hr />\n";
+							print "An error has occurred during insert into instCats table. Please try again<br />\n";
+							$dbh->disconnect();
+							exit;
+						}
+						$countcde = $countcde + 1;
+					}
+					
+					$sth_getmmtsc=$dbh->prepare("SELECT distinct source_class,source_class from sourceClass where IDNo=$getmmtic->[0]");
+					if (!defined $sth_getmmtsc) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       	 				$sth_getmmtsc->execute;
+       	 				while ($getmmtsc = $sth_getmmtsc->fetch) {
+						$doStatus = $dbh->do("INSERT INTO sourceClass (IDNo,submitter,source_class,statusFlag) values ($IDNo,$user_id,\'$getmmtsc->[0]\',1)");
+						if ( ! defined $doStatus ) {
+							print "<hr />\n";
+							print "An error has occurred during insert into sourceClass table. Please try again<br />\n";
+							$dbh->disconnect();
+							exit;
+						}
+					}
+				}
+			}
+			@measCats=();
+			@cats=();
+			@pmts=();
+			$countmcde=0;
+			$countpmt=0;
+
+			$sth_getpmts=$dbh->prepare("SELECT distinct primary_meas_type_code,instrument_class_code,instrument_code FROM $archivedb.$dsvarnameinfotab dvi inner join $archivedb.$dsinfotab di on di.datastream=dvi.datastream WHERE instrument_class_code='$instClass' AND instrument_code='$dsBase' AND di.datastream like '%$dsBase%$dataLevel'");
+			if (!defined $sth_getpmts) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       	 		$sth_getpmts->execute;
+       	 		while ($getpmts = $sth_getpmts->fetch) {
+				$pmts[$countpmt]=$getpmts->[0];				
+				$sth_getmeascat=$dbh->prepare("SELECT distinct meas_category_code,meas_subcategory_code FROM $archivedb.$dsvarnamemeascatstab dmc inner join $archivedb.$dsinfotab di on dmc.datastream=di.datastream inner join $archivedb.$dsvarnameinfotab dvi on dmc.datastream=dvi.datastream WHERE di.instrument_class_code='$instClass' AND di.instrument_code='$dsBase' AND di.datastream like '%$dsBase%$dataLevel' AND dvi.primary_meas_type_code='$pmts[$countpmt]'");
+				if (!defined $sth_getmeascat) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       	 			$sth_getmeascat->execute;
+       	 			while ($getmeascat = $sth_getmeascat->fetch) {				
+					$sc="";
+					if ($getmeascat->[1] eq "") {
+						$sc="$getmeascat->[0]";
+					} else {
+						$sc="$getmeascat->[0]"."("."$getmeascat->[1]".")";
+					}
+					$cats[$countmcde]="$sc";
+					$countmcde=$countmcde+1;			
+				}
+				$countpmt = $countpmt + 1;
+			}
+			@sortedcats=();
+			@sortedcats=sort @cats;
+			@cats=();
+			$chksc="";
+			$csc=0;
+			foreach $sortcat (@sortedcats) {
+				if ($sortcat ne "$chksc") {
+					$cats[$csc]=$sortcat;
+					$csc = $csc + 1;
+				}
+				$chksc=$sortcat;
+			}
+			foreach $c (@cats) {
+				$mc="";
+				$msc="";
+				@breakit=();
+				#insert a meascat/submeascat record
+				@breakit=split(/\(/,$c);
+				$mc=$breakit[0];
+				$_=$breakit[1];
+				s/\)//g;
+				$msc=$_;
+				if ($msc eq "") {
+					$msc="NULL";
+				} else {
+					$msc="'"."$msc"."'";
+				}
+				if ($mc ne "MEAS_CAT_CODES") {
+					$doStatus = $dbh->do("INSERT INTO measCats (IDNo,submitter,meas_category_code,meas_subcategory_code,statusFlag) values ($IDNo,$user_id,'$mc',$msc,1)");
+					if ( ! defined $doStatus ) {
+						print "<hr />\n";
+						print "An error has occurred during insert into measCats table. Please try again<br />\n";
+						$dbh->disconnect();
+						exit;
+					}
+				}
+			}
+			foreach $p (@pmts) {
+				$thispmt=$p;
+				#insert a pmt record
+				#foreach pmt record, get all pms and insert records for each
+				
+				$sth_getpm=$dbh->prepare("SELECT DISTINCT primary_measurement,primary_meas_type_code,var_name FROM $archivedb.$dsvarnameinfotab WHERE primary_meas_type_code='$thispmt' AND $archivedb.$dsvarnameinfotab.datastream IN (SELECT distinct $archivedb.$dsinfotab.datastream FROM $archivedb.$dsinfotab WHERE instrument_class_code ='$instClass' AND instrument_code='$dsBase')");
+				if (!defined $sth_getpm) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       	 			$sth_getpm->execute;
+       	 			while ($getpm = $sth_getpm->fetch) {			
+					$doStatus = $dbh->do("INSERT INTO primMeas (IDNo,submitter,primary_meas_code,statusFlag,primary_measurement,var_name) values ($IDNo,$user_id,'$thispmt',1,'$getpm->[0]','$getpm->[2]')");
+					if ( ! defined $doStatus ) {
+						print "<hr />\n";
+						print "An error has occurred during insert into primMeas table. Please try again<br />\n";
+						$dbh->disconnect();
+						exit;
+					}
+				}
+			}
+		} else {
+			if ($countclass < 1) {
+				print "<br />No existing metadata at archive.<br>\n";
+					
+			} else {
+				print "<br />More than one instrument class returned for instrument code $dsBase.  Could that be correct? Metadata at archive needs to be examined for accuracy before proceeding.<br>\n";
+			}
+		}
+	} else {
+		# this is a new DS - no archive metadata exists
+		# would be good to check dsdb at this point to see if there is any info there!
+	}
+
+	$submit="Registered DS";	
+}
+if ($submit eq "Registered DS") {
+	@emailarray=();
+	$emailcount=0;
+	print "<strong><br />Email will be distributed as follows for the review process:</strong><br />\n";
+	print "<P><strong>Submitter:</strong> ";
+	
+	$sth_getsub=$dbh->prepare("SELECT person_id,name_first,name_last,email from $peopletab where person_id=$user_id");
+	if (!defined $sth_getsub) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       	$sth_getsub->execute;
+       	while ($getsub = $sth_getsub->fetch) {
+		print "$getsub->[1] $getsub->[2]";
+		$emailarray[$emailcount]=$getsub->[3];
+		$emailcount = $emailcount + 1;
+	}
+	print "<P><strong>Metadata Reviewer(s):</strong> ";
+	$countmdg=0;
+	
+	$sth_getrevmd=$dbh->prepare("SELECT distinct reviewers.person_id,$peopletab.name_first,$peopletab.name_last,$peopletab.email from reviewers,$peopletab where reviewers.person_id=$peopletab.person_id and reviewers.revFunction='MDATA' and type='DS'");
+	if (!defined $sth_getrevmd) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       	$sth_getrevmd->execute;
+       	while ($getrevmd = $sth_getrevmd->fetch) {
+		if ($countmdg == 0) {
+			print "$getrevmd->[1] $getrevmd->[2]";
+			$emailarray[$emailcount]=$getrevmd->[3];
+		} else {
+			print ", $getrevmd->[1] $getrevmd->[2]";
+			$emailarray[$emailcount]=$getrevmd->[3];
+		}
+		$countmdg = $countmdg + 1;
+		$emailcount = $emailcount + 1;
+	}
+	@sortedemail = sort @emailarray;
+	$objcttype="DS";
+	$oldem = "";
+	# need to work on using distribute function in MMT lib to handle mailing, so I can remove mailing section below - kjl 
+	#&distribute("$user_id","$type",$IDNo,"$objcttype");
+	$typedesc="";
+	$sth_gettypedesc=$dbh->prepare("SELECT typeID,type_name from type where typeID='$objcttype'");
+	if (!defined $sth_gettypedesc) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       	$sth_gettypedesc->execute;
+       	while ($gettypedesc = $sth_gettypedesc->fetch) {
+		$typedesc=$gettypedesc->[1];
+	}	
+	foreach $em (@sortedemail) {
+		if ($em ne $oldem) {
+			$thissubj="";
+			if ($new == 1) {
+				$thissubj="ENTRY";
+			} else {
+				$thissubj="UPDATE";
+			}
+			open(MAIL,"|/home/www/DB/lib/dbmail -r \"webformadmin\@arm.gov\" -s \"MMT: $typedesc $thissubj ($dsBase\.$dataLevel) - MMT# $IDNo\" \"$em\"");
+			print MAIL "Submitter: $user_first $user_last\n";
+
+			print MAIL "\n\n";
+			print MAIL "Datastream Class: $dsBase\.$dataLevel\n";
+			print MAIL "DataStream Class Description: $dsBaseDesc\n\n";
+			print MAIL "http://$webserver/cgi-bin/MMT/admin/reviewMetaData.pl?IDNo=$IDNo\n";
+			close(MAIL);
+		}
+		$oldem = $em;
+	}
+	print "<hr>\n";
+	&bottomlinks($IDNo,"DS");
+	print "</div>\n";
+	print "</form>\n";
+	$dbh->disconnect();
+	exit;
+}
+print "<font color=red><strong> * = Required</strong></font>\n";
+
+if ($submit ne "RESET") {
+	if ($dsBase eq "") {
+		print "<hr><P><h3>DATASTREAM INFORMATION</h3>\n";
+		print "<font color=red><strong> * </strong></font> \n";
+		print "<small><i>(please limit to 25 characters)</i> <a href=\"metadataexamples.pl?mdtype=instcode\" target=\"ic_new\">examples</a></small>\n";
+		print "<P><dd><strong>Instrument Code</strong><INPUT TYPE=\"text\" NAME=\"dsBase\" SIZE=\"50\" value=\"\" maxlength=25/> \n";
+		print "<strong>Data Level</strong> \n";
+		print "<select NAME=\"dataLevel\"> \n";
+		print "<option value=\"\"> </option>\n";
+		$sth_ret=$dbh->prepare("SELECT distinct $archivedb.$dsinfotab.data_level_code,$archivedb.$dsinfotab.data_level_code FROM $archivedb.$dsinfotab order by data_level_code");
+		if (!defined $sth_ret) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       		$sth_ret->execute;
+       		while ($ret = $sth_ret->fetch) {
+			print "<option value=\"$ret->[0]\">$ret->[0]</option>\n";
+		}
+		print "</select>\n";
+		$type="";
+	} else {
+		print "<hr><P><h3>DATASTREAM INFORMATION</h3>\n";
+		print "<p><dd><strong>Instrument Code</strong> $dsBase<br>\n";
+		print "<input type=\"hidden\" name=\"dsBase\" value=\"$dsBase\">\n";
+		print "<Input type=\"hidden\" name=\"dataLevel\" value=\"$dataLevel\">\n";
+		print "<strong>Data Level</strong> $dataLevel\n";
+	}
+	if (($IDNo eq "") && ($dsBase eq "")) {
+		print "<input type=\"submit\" name=\"submit\" value=\"Check it\"></dd>\n";
+	}
+	if  (($type eq "") && (($dsBase eq "") || ($dataLevel eq "")) ) {
+		print "</div>\n";
+		print "</form>\n";
+		$dbh->disconnect();
+		exit;
+	}
+	$exista=0;
+	$existb=0;
+	if (($dsBase ne "") && ($dataLevel ne "")){	
+		$sth_checkarchive=$dbh->prepare("SELECT count(*),count(*) from $archivedb.$dsinfotab where instrument_code='$dsBase' and data_level_code='$dataLevel'");
+		if (!defined $sth_checkarchive) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       		$sth_checkarchive->execute;
+       		while ($checkarchive = $sth_checkarchive->fetch) {
+			$exista=$checkarchive->[0];
+		}		
+		$sth_checkMMT=$dbh->prepare("SELECT count(*),count(*) from DS where dsBase='$dsBase' and dataLevel='$dataLevel'");
+		if (!defined $sth_checkMMT) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       		$sth_checkMMT->execute;
+       		while ($checkMMT = $sth_checkMMT->fetch) {
+			$existb=$checkMMT->[0];
+		}
+	}
+	if (($exista == 0) && ($existb == 0)) {
+		print "<br /><p><strong><font color=red>MMT: new datastream started</font></strong><br />\n";
+		$process="Bn";
+		@sitesarray=();
+	} elsif (($exista  > 0) && ($existb == 0)) {
+		print "<p><strong><font color=red>MMT: You are proposing changes to a production datastream.</font></strong><br />\n";
+		$process="Ma";
+		$sth_getarchivedesc=$dbh->prepare("SELECT distinct instrument_name,instrument_code from $archivedb.$instrcodedetailstab WHERE instrument_code='$dsBase'");
+		if (!defined $sth_getarchivedesc) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       		$sth_getarchivedesc->execute;
+       		while ($getarchivedesc = $sth_getarchivedesc->fetch) {
+			$dsBaseDesc=$getarchivedesc->[0];
+		}	
+	} elsif (($exista == 0) && ($existb > 0)) {
+		print "<p><strong><font color=red>MMT: DS submission already begun.<p>Continue with proposed changes below</font></strong><br />\n";
+		$process="Mb";
+
+	} elsif (($exista > 0) && ($existb > 0)) {
+		print "<p><strong><font color=red>MMT: Proposed changes to a production datastream have been started.<p>Continue with proposed changes below</font></strong><br />\n";
+		$process="Mba";
+	}
+	if (($process eq "Mb") || ($process eq "Mba")) {	
+		$sth_getbdesc=$dbh->prepare("SELECT distinct dsBase,dsBaseDesc,estFilesPerDay,exptFileSize,accptMin,accptMax,estSampPerDay,exptDelLag,procBlockSize from DS where dsBase='$dsBase' and dataLevel='$dataLevel'");
+		if (!defined $sth_getbdesc) { die "Cannot prepare statement: $DBI::errstr\n"; }
+       		$sth_getbdesc->execute;
+       		while ($getbdesc = $sth_getbdesc->fetch) {
+			$dsBaseDesc=$getbdesc->[1];
+			$filespd=$getbdesc->[2];
+			$exptfs=$getbdesc->[3];
+			$accptmin=$getbdesc->[4];
+			$accptmax=$getbdesc->[5];
+			$estsamppd=$getbdesc->[6];
+			$exptdellag=$getbdesc->[7];
+			$procblksze=$getbdesc->[8];
+		}
+	}	
+	print "<INPUT TYPE=\"HIDDEN\" name=\"process\" value=\"$process\" />\n";
+	$lastname=lc $name_last;
+	print "<P><strong>Datastream Class Description (Instrument Code Name)</strong> <font color=red><strong> * </strong></font><br />\n";
+	if ($dsBaseDesc eq "") {
+		print "<P><TEXTAREA NAME=\"dsBaseDesc\" ROWS=5 COLS=60 wrap=\"virtual\"></TEXTAREA>\n";
+	} else {
+		print "<P><TEXTAREA NAME=\"dsBaseDesc\" ROWS=5 COLS=60 wrap=\"virtual\">$dsBaseDesc</TEXTAREA>\n";
+	}
+	print "<br /><br />\n";
+	print "<INPUT TYPE=\"submit\" NAME=\"submit\" value=\"Submit\" /> <INPUT TYPE=\"submit\" NAME=\"submit\" value=\"RESET\" />\n";
+	print "<INPUT TYPE=\"HIDDEN\" NAME=\"lastName\" value=\"$lastName\" />\n";
+	print "</form>\n";
+	$dbh->disconnect();
+	exit;
+} 
+print "</form>\n";
+print "<div class=\"spacer\"></div>\n";
+print "<hr />\n";
+&bottomlinks($IDNo,"DS");
+$dbh->disconnect();
+print "</div>\n";
+print "</body>\n";
+print "</html>\n";

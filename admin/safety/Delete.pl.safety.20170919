@@ -1,0 +1,109 @@
+#!/usr/bin/perl 
+
+use CGI qw(:cgi-lib);
+ReadParse();
+$query=new CGI;
+$query->charset('UTF-8');
+use JSON::XS;
+use DBI;
+use Time::Local;
+use LWP;
+use PGMMT_lib;
+use HTTP::Request;
+use POSIX qw(strftime);
+my $VROOT=$ENV{'VROOT'};
+my $remote_user=$ENV{'REMOTE_USER'};
+my $user = &get_user;
+my $password= &get_pwd;
+my $peopletab = &get_peopletab;
+my $grouprole = &get_grouprole;
+my $dbname = &get_dbname;
+my $webserver=&get_webserver;
+my $dbserver = &get_dbserver;
+#*******************************************************************************
+# get stuff from calling perl script
+my $IDNo=$in{IDNo}; 
+my $type=$in{type};
+#*******************************************************************************
+# here is the access to the MMT database
+my $dsn = "DBI:Pg:dbname=arm_xdc;host=$dbserver;port=5432";
+my $userid = $user;
+my $password=$password;
+my $dbh = DBI->connect($dsn,$userid,$password,  {'RaiseError'=> 1}) or die $DBI::errstr; 
+#*******************************************************************************
+# prepare form page
+print $query->header;
+print "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n";
+print "<html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"en\">\n";
+print "<head>\n";
+print "<title>MMT: Delete</title>\n";
+print "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=UTF-8\"/>\n";
+print "<link rel=\"stylesheet\" type=\"text/css\" href=\"/shared/arm_basic.css\" />\n";
+print "<style type=\"text/css\" media=\"screen\"><!-- \@import \"/shared/arm_adv.css\"; --></style>\n";
+print "<link rel=\"stylesheet\" type=\"text/css\" href=\"/shared/arm_print.css\" media=\"print\" />\n";
+print "<style type=\"text/css\" media=\"screen\"><!-- \@import \"/shared/fc.css\"; --></style>\n";
+print "<style type=\"text/css\" media=\"all\">\n";
+print "#content {margin-right:0;background-image: none;}\n";
+print "</style>\n";
+print "</head>\n";
+#*******************************************************************************
+print "<body class=\"iops\">\n";
+print "<div id=\"content\">\n";
+if ($remote_user ne "") {
+	$sth_getuser=$dbh->prepare("SELECT person_id,name_first,name_last from $peopletab where lower(user_name)=lower('$remote_user')");
+        if (!defined $sth_getuser) { die "Cannot prepare statement: $DBI::errstr\n"; }
+        $sth_getuser->execute;
+        while ($getuser = $sth_getuser->fetch) {
+		$user_first=$getuser->[1];
+		$user_last=$getuser->[2];
+		$user_id=$getuser->[0];
+	}
+} else {
+	print "You are not logged into the MMT<p>\n";
+	my $id="";
+	&bottomlinks($id,"");
+	$dbh->disconnect();
+	exit;
+}
+&toplinks($user_id,$user_first,$user_last);
+print "<form method=\"post\" name=\"MMT\" action=\"Delete.pl\" enctype=\"multipart/form-data\">\n";
+if ($in{submit} eq "") {
+	print "<strong>Are you sure you want to delete this object from the MMT?</strong><p> ";
+	print "<INPUT TYPE=\"submit\" name=\"submit\" value=\"YES\"> ";
+	print "<INPUT TYPE=\"submit\" name=\"submit\" value=\"NO\"><p>\n";
+	print "<INPUT TYPE=\"hidden\" name=\"type\" value=\"$type\">\n";
+	print "<INPUT TYPE=\"hidden\" name=\"IDNo\" value=\"$IDNo\">\n";
+	print "<hr />\n";
+}
+if ($in{submit} eq "YES") {
+	print "<strong>MMT submission (MMT# $IDNo) will be deleted</strong><br>\n";
+	$doStatus = $dbh->do("DELETE FROM IDs WHERE IDNo=$IDNo");
+	$doStatus = $dbh->do("DELETE FROM reviewerStatus WHERE IDNo=$IDNo");
+	$doStatus = $dbh->do("DELETE FROM sites WHERE IDNo=$IDNo");
+	$doStatus = $dbh->do("DELETE FROM comments WHERE IDNo=$IDNo");
+	$doStatus = $dbh->do("DELETE FROM facilities where IDNo=$IDNo");
+	$doStatus = $dbh->do("DELETE from instCats WHERE IDNo=$IDNo");
+	$doStatus = $dbh->do("DELETE from sourceClass WHERE IDNo=$IDNo");
+	$doStatus = $dbh->do("DELETE from instWebPageBlurb WHERE IDNo=$IDNo");
+	$doStatus = $dbh->do("DELETE from instContacts WHERE IDNo=$IDNo");
+	$doStatus = $dbh->do("DELETE FROM instClass WHERE IDNo=$IDNo");
+	$doStatus = $dbh->do("DELETE FROM primMeas WHERE IDNo=$IDNo");
+	$doStatus = $dbh->do("DELETE FROM measCats WHERE IDNo=$IDNo");
+	$doStatus = $dbh->do("DELETE FROM notifyList WHERE IDNo=$IDNo");
+	$doStatus = $dbh->do("DELETE FROM otherContacts WHERE IDNo=$IDNo");
+	$doStatus = $dbh->do("DELETE FROM suppReviewers WHERE IDNo=$IDNo");
+	$doStatus = $dbh->do("DELETE FROM DS WHERE IDNo=$IDNo");
+	$doStatus = $dbh->do("DELETE FROM DOD WHERE IDNo=$IDNo");
+	$doStatus = $dbh->do("DELETE from instCodes WHERE IDNo=$IDNo");
+	#future table
+	#$doStatus = $dbh->do("DELETE from InstCodeSites WHERE IDNo=$IDNo");		
+	$IDNo="";
+	print "<hr />\n";
+} elsif ($in{submit} eq "NO") {
+	;
+}
+&bottomlinks($IDNo,"$type");
+$dbh->disconnect();
+print "</div>\n";
+print "</BODY></HTML>\n";
+exit;

@@ -1,0 +1,178 @@
+#!/usr/bin/perl 
+
+
+### Usage: DailyMMTArchiveCompare.pl?mtype=...&IDNo=....
+###        where mtype = S, F, I, CL, DOD, PMT, DS
+###             mtype must be supplied
+###             if IDNo is not supplied, all IDs will be processed 
+###             if specifying IDNo, you must specify mtype!
+use arm_cgi;
+use CGI qw(:cgi-lib);
+ReadParse();
+use DBI;
+use PGMMT_lib;
+use LWP;
+use HTTP::Request;
+my $VROOT=$ENV{'VROOT'};
+my $remote_user=$ENV{'REMOTE_USER'};
+my $query = new CGI;
+$query->charset('UTF-8');
+my $user = &get_user;
+my $password= &get_pwd;
+my $dbname = &get_dbname;
+my $dbserver = &get_dbserver;
+my $peopletab = &get_peopletab;
+print $query->header;
+
+print "<!DOCTYPE html PUBLIC \"-//W3C//DTD XHTML 1.0 Strict//EN\" \"http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd\">\n";
+print "<html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"en\">\n";
+print "<head>\n";
+print "<title>MMT Menu</title>\n";
+print "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=UTF-8\"/>\n";
+print "<link rel=\"stylesheet\" type=\"text/css\" href=\"/shared/arm_basic.css\" />\n";
+print "<style type=\"text/css\" media=\"screen\"><!-- \@import \"/shared/arm_adv.css\"; --></style>\n";
+print "<link rel=\"stylesheet\" type=\"text/css\" href=\"/shared/arm_print.css\" media=\"print\" />\n";
+print "<style type=\"text/css\" media=\"screen\"><!-- \@import \"/shared/fc.css\"; --></style>\n";
+print "<style type=\"text/css\" media=\"all\">\n";
+print "#content {margin-right:0;background-image: none;}\n";
+print "#tableContainer {width:1080px; height:200px; overflow: scroll; padding: 0;}\n";
+print "table {width: 100%; margin: 0; padding: 0;}\n";
+print "</style>\n";
+
+print '<style type="text/css">
+table,th,td {
+	border:1px solid black;
+	cellspacing:10px;
+}
+</style>
+';
+print '<style type="text/css">
+P {text-indent: 30pt;
+}
+</style>
+';
+print '<style type="text/css">
+p {text-indent: 0pt;
+}
+</style>
+';
+print "</head>\n";
+
+#*******************************************************************************
+# here is the access to the MMT database
+my $dsn = "DBI:Pg:dbname=arm_xdc;host=$dbserver;port=5432";
+my $userid = $user;
+my $password=$password;
+my $dbh = DBI->connect($dsn,$userid,$password,  {'RaiseError'=> 1}) or die $DBI::errstr; 
+
+my $name_first="";
+my $name_last="";
+my $firstName="";
+my $lastName="";
+my $armdefwebserver="";
+if ($webserver =~ "dev") {
+	$armdefwebserver="http://dev.www.arm.gov";
+} else {
+	$armdefwebserver="http://www.arm.gov";
+}
+if ($remote_user ne "") {
+	$sth_getuser=$dbh->prepare("SELECT person_id,name_first,name_last from $peopletab where lower(user_name)=lower('$remote_user')");
+        if (!defined $sth_getuser) { die "Cannot prepare statement: $DBI::errstr\n"; }
+        $sth_getuser->execute;
+        while ($getuser = $sth_getuser->fetch) {
+		$user_first=$getuser->[1];
+		$user_last=$getuser->[2];
+		$user_id=$getuser->[0];
+	}
+} else {
+	my $id="";
+	&bottomlinks($id,"");
+	$dbh->disconnect();
+	exit;
+}
+
+&toplinks($user_id,$user_first,$user_last);
+
+$now=&getnow;
+print '<body class=\"iops\">';
+print '<div id="content">';
+print "<center><h2>MMT & Archive Metadata Comparison</h2></center>";
+print "<hr>\n";
+
+$type="all";
+$mtype="";
+$mtype=$in{mtype};
+$emailcheck="";
+$IDNo="";
+$specID="";
+$specID=$in{IDNo};
+$tabName="";
+if ($mtype eq "") {
+	$sth_gettypes=$dbh->prepare("SELECT distinct type,type from IDs where revStatus=2 order by type");
+	if (!defined $sth_gettypes) { die "Cannot prepare statement: $DBI::errstr\n"; }
+} else {
+	$sth_gettypes=$dbh->prepare("SELECT distinct type,type from IDs where revStatus=2 and type='$mtype'");
+	if (!defined $sth_gettypes) { die "Cannot prepare statement: $DBI::errstr\n"; }
+}
+$sth_gettypes->execute;
+while ($gettypes = $sth_gettypes->fetch) {
+	$mtype=$gettypes->[0];	
+	if ($mtype eq "S") {
+		$tabName="S (Sites)";
+	}
+	if ($mtype eq "F") {
+		$tabName="F (Facilities)";
+	}
+	if ($mtype eq "I") {
+		$tabName="I (Instrument Class)";
+	}
+	if ($mtype eq "PMT") {
+		$tabName="PMT (Primary Measurement Type)";
+	}
+	if ($mtype eq "DS") {
+		$tabName="DS (Datastream)";
+	}
+	if ($mtype eq "DOD") {
+		$tabName="DOD (Data Object Definition)";
+	}
+	if ($mtype eq "CL") {
+		$tabName="CL (Contacts)";
+	}
+	if ($mtype eq "CI") {
+		$tabName="CI (Clone Request)";
+	}
+	$idlist="";
+	$dbstatlist="";
+	$countids=0;
+	if ($specID eq "") {
+		$sth_getids=$dbh->prepare("SELECT distinct IDNo,DBstatus from IDs where revStatus=2 AND type='$mtype' order by IDNo");
+		if (!defined $sth_getids) { die "Cannot prepare statement: $DBI::errstr\n"; }
+	} else {
+		$sth_getids=$dbh->prepare("SELECT distinct IDNo,DBstatus from IDs where revStatus=2 AND type='$mtype' and IDNo=$specID");
+		if (!defined $sth_getids) { die "Cannot prepare statement: $DBI::errstr\n"; }
+	}
+      	$sth_getids->execute;		
+	while ($getids = $sth_getids->fetch) {
+		if ($countids == 0) {
+			$idlist=$getids->[0];
+			$dbstatlist=$getids->[1];
+		} else {
+			$idlist="$idlist".":"."$getids->[0]";
+			$dbstatlist="$dbstatlist".":"."$getids->[1]";
+		}
+		$countids = $countids + 1;
+	}
+	print "$tabName Synchronization with Archive database<br>\n";
+	print "<dl><dd>\n";
+	if ($idlist ne "") {
+		#print "mtype $mtype, idlist $idlist, dbstatlist $dbstatlist, emailcheck $emailcheck<br>\n";
+		&sendimplementation("$mtype","$idlist","$dbstatlist","$emailcheck");
+		print "</dd></dl>\n";
+	} else {
+		print "RECORD NOT APPROVED<br>\n";
+	}
+}
+$dbh->disconnect();
+print "</div>\n";
+print "</body>\n";
+print "</html>\n";
