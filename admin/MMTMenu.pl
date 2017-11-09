@@ -83,6 +83,7 @@ if ($webserver =~ "dev.www.db") {
 	$armdefwebserver="http://www.arm.gov";
 	$sybwebserver="http://www.db1.arm.gov";
 }
+&showifdev;
 print '<body class=\"iops\">';
 print '<div id="content">';
 

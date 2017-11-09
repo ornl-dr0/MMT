@@ -54,6 +54,7 @@ print "<style type=\"text/css\" media=\"all\">\n";
 print "#content {margin-right:0;background-image: none;}\n";
 print "</style>\n";
 print "</head>\n";
+&showifdev;
 print "<body class=\"iops\">\n";
 print "<div id=\"content\">\n";
 print "<form method=\"post\" action=\"Site.pl\">\n";
@@ -429,7 +430,9 @@ if ($submit eq "Submit") {
 		print "<hr />\n";
 		&bottomlinks($IDNo,"S");
 		print "</div>\n";
-		print "</BODY></HTML>\n";
+		print "</BODY>\n";
+		print "</HTML>\n";
+
 		$dbh->disconnect();		
 		exit;
 	}

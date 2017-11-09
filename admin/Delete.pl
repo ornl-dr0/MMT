@@ -47,6 +47,7 @@ print "#content {margin-right:0;background-image: none;}\n";
 print "</style>\n";
 print "</head>\n";
 #*******************************************************************************
+&showifdev;
 print "<body class=\"iops\">\n";
 print "<div id=\"content\">\n";
 if ($remote_user ne "") {

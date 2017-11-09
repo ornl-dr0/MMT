@@ -81,6 +81,7 @@ p {text-indent: 0pt;
 </style>
 ';
 print "</head>\n";
+&showifdev;
 print '<body class=\"iops\">';
 print '<div id="content">';
 print "<form method=\"post\" name=\"MMT\" action=\"DS.pl\" enctype=\"multipart/form-data\">\n";

@@ -73,21 +73,6 @@ print '
 <link rel="shortcut icon" href="/images/favicon.ico" />
 <link rel="icon" href="/images/favicon.ico" />
 ';
-if ($webserver =~ "dev") {
-	print '<style type="text/css">
-body {
-	background-color: #fff;
-	margin: 0;
-	padding: 0;
-	width: 100%;
-	background-image: url(/images/development.gif);
-	background-position: top left;
-	background-repeat: repeat-y
-}
-
-</style>
-';
-}
 print '<style type="text/css">
 table,th,td {
 	border:1px solid black;
@@ -110,6 +95,7 @@ print "<script type=\"text/javascript\" src=\"/shared/jscalendar-1.0/calendar-se
 print '
 </head>
 ';
+&showifdev;
 print '<div id="content">';
 print "<p>\n";
 if (($sd eq "") || ($ed eq "")) {
