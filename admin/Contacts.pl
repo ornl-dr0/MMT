@@ -70,6 +70,7 @@ print "color: red;\n";
 print "}\n";
 print "</style>\n";
 print "</head>\n";
+&showifdev;
 print "<body class=\"iops\">\n";
 print "<div id=\"content\">\n";
 print "<form method=\"post\" action=\"Contacts.pl\">\n";

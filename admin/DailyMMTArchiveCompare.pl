@@ -94,6 +94,7 @@ if ($remote_user ne "") {
 &toplinks($user_id,$user_first,$user_last);
 
 $now=&getnow;
+&showifdev;
 print '<body class=\"iops\">';
 print '<div id="content">';
 print "<center><h2>MMT & Archive Metadata Comparison</h2></center>";

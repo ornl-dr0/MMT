@@ -95,6 +95,7 @@ print "table,th,td {border:1px solid black; cellspacing:10px;vertical-align:top;
 print ".red { color: red;}\n";
 print "</style>\n";
 print "</head>\n";
+&showifdev;
 print "<body class=\"iops\">\n";
 print "<div id=\"content\">\n";
 if ($IDNo eq "") {

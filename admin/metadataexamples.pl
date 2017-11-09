@@ -42,6 +42,7 @@ print "  <META NAME=\"description\" CONTENT=\"MMT Database\">\n";
 print "  <META NAME=\"keywords\" CONTENT=\"MMT, database, admin\">\n";
 print "  <META NAME=\"GENERATOR\" CONTENT=\"Mozilla/3.0\">\n";
 print "</HEAD>\n";
+&showifdev;
 print "<BODY BGCOLOR=\"#FFFFFF\">\n";
 if ($mdtype eq "instcode") {
 	$mdtype = "instrument_code";

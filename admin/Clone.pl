@@ -64,6 +64,7 @@ print "<style type=\"text/css\" media=\"all\">\n";
 print "#content {margin-right:0;background-image: none;}\n";
 print "</style>\n";
 print "</head>\n";
+&showifdev;
 print "<body class=\"iops\">\n";
 print "<div id=\"content\">\n";
 print "<form enctype=\"multipart/form-data\" method=\"POST\" name=\"clone\" action=\"Clone.pl\">\n";

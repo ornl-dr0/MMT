@@ -36,6 +36,11 @@ print "<html xmlns=\"http://www.w3.org/1999/xhtml\" lang=\"en\">\n";
 print "<head>\n";
 print "<title>MMT Summary</title>\n";
 print "<meta http-equiv=\"Content-Type\" content=\"text/html;charset=UTF-8\"/>\n";
+# BEGIN: Include DataTables from https://datatables.net/
+print "<script type=\"text/javascript\" charset=\"utf8\" src=\"/shared/jquery-1.12.4.js\"></script>\n";
+print "<link rel=\"stylesheet\" type=\"text/css\" href=\"/shared/jquery.dataTables.min.css\">\n";
+print "<script type=\"text/javascript\" charset=\"utf8\" src=\"/shared/jquery.dataTables.min.js\"></script>\n";
+# END: Include DataTables from https://datatables.net/
 print "<link rel=\"stylesheet\" type=\"text/css\" href=\"/shared/arm_basic.css\" />\n";
 print "<style type=\"text/css\" media=\"screen\"><!-- \@import \"/shared/arm_adv.css\"; --></style>\n";
 print "<link rel=\"stylesheet\" type=\"text/css\" href=\"/shared/arm_print.css\" media=\"print\" />\n";
@@ -62,6 +67,29 @@ p {text-indent: 0pt;
 }
 </style>
 ';
+print '<style type="text/css">
+/* Start by setting display:none to make this hidden.
+   Then we position it in relation to the viewport window
+   with position:fixed. Width, height, top and left speak
+   for themselves. Background we set to 80% white with
+   our animation centered, and no-repeating */
+.modal {
+    position:   fixed;
+    z-index:    1000;
+    top:        0;
+    left:       0;
+    height:     100%;
+    width:      100%;
+    background: rgba( 255, 255, 255, .8 ) 
+                url("/images/loading-bar.gif") 
+                50% 50% 
+                no-repeat;
+}
+</style>
+';
+print "<script type=\"text/javascript\">\n";
+print "    console.log(\"Loading...\");\n";
+print "</script>\n";
 print "</head>\n";
 # here is the access to the MMT database
 my $dsn = "DBI:Pg:dbname=arm_xdc;host=$dbserver;port=5432";
@@ -76,7 +104,10 @@ $type="";
 $type=$in{type};
 $filter="";
 $filter=$in{filter};
+&showifdev;
 print '<body class=\"iops\">';
+# Overlay...
+print "<div id=\"overlay\" class=\"modal\"><!-- Loading Modal --></div>\n";
 print '<div id="content">';
 print "<form method=\"post\" name=\"MMT\" action=\"MMTMetaData.pl\" enctype=\"multipart/form-data\">\n";
 if ($remote_user ne "") {
@@ -460,4 +491,26 @@ print "<p><strong><a href=\"MMTMenu.pl?t=x\">MMT Main Menu</a></strong><p>\n";
 print "<div class=\"spacer\"></div>\n";
 print "</div>\n";
 print "</body>\n";
+# BEGIN: Use DataTables from https://datatables.net/
+print "<script type=\"text/javascript\">\n";
+print "\$(window).on({\n";
+print "    load: function(ex) {\n";
+print "        ex.stopPropagation();  // Prevents the event from bubbling up the DOM tree";
+print "        \$('#overlay').hide();\n";    
+print "        \$('#overlay').removeClass(\"modal\");\n";    
+print "        console.log(\"Loading DONE!\");\n";
+print "    },\n";
+print "    error: function(errorMsg, url, lineNumber, column, errorObj) {\n";
+print "        console.log('error[' + lineNumber + '/' + column + ']: ' + errorMsg);\n";
+print "    }\n";
+print "});\n";
+print "\$(document).on({\n";
+print "    ready: function() {\n";
+print "        console.log(\"Datatable...\");\n";
+print "        \$('#mainTable').DataTable();\n";
+print "        console.log(\"Datatable DONE!\");\n";
+print "    }\n";
+print "});\n";
+print "</script>\n";
+# END: Use DataTables from https://datatables.net/
 print "</html>\n";

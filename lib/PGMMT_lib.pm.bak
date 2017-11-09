@@ -237,18 +237,18 @@ sub displaycontacts
 	}
 	if ($sortable == 0) {
 		print "<div id=\"tableContainer\">\n";
-		print "<table id=\"mainTable\" cellspacing=\"0\">\n";
-		print "<thead><tr><th colspan=8 align=center><strong><font color=blue>ARM Contacts</font> Submissions for Review</strong></th></tr>\n";
+		print "<table cellspacing=\"0\">\n";
+		print "<th colspan=8 align=center><strong><font color=blue>ARM Contacts</font> Submissions for Review</strong></th>\n";
 		print "<tr><th width=10%>Submit Date</th><th width=10%>Submitter</th><th width=10%><font color=blue>Contact Name</font></th><th width=20%><font color=blue>Group</font></th><th width=15%><font color=blue>Role</font></th><th width=15%><font color=blue>Sub-Role</font></th></font><th width=10%>Review Status</th>\n";
 		print "<th width=10%>People DB (grouprole) Status</th>\n";
-		print "</tr></thead>";
+		print "</tr>";
 	} else {
 		print "<div id=\"tableContainer\">\n";
-		print "<table id=\"mainTable\" cellspacing=\"0\">\n";	
-		print "<thead><tr><th colspan=8 align=center><strong><font color=blue>ARM Contacts</font> Submissions for Review</strong></th></tr>\n";
+		print "<table cellspacing=\"0\">\n";	
+		print "<th colspan=8 align=center><strong><font color=blue>ARM Contacts</font> Submissions for Review</strong></th>\n";
 		print "<tr><th width=10%><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=CL&sortby=entry_date\" style=\"text-decoration: none; color:black\">Submit Date</a></th><th width=10%><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=CL&sortby=submitter\" style=\"text-decoration: none; color:black\">Submitter</a></th><th width=10%><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=CL&sortby=contact\" style=\"text-decoration: none;color: blue\">Contact Name</a></font></th><th width=20%><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=CL&sortby=group\" style=\"text-decoration: none; color: black\">Group</a></th><th width=15%><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=CL&sortby=role\" style=\"text-decoration: none;color: black\">Role</a></th><th width=15%><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=CL&sortby=subrole\" style=\"text-decoration: none; color: black\">Sub-Role</a></th><th><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=CL&sortby=rstatus\" style=\"text-decoration: none; color: black\">Review Status</a></th>\n";
 		print "<th width=10%><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=CL&sortby=dbstatus\" style=\"text-decoration: none\">People DB (grouprole) Status</a></th>\n";
-		print "</tr></thead>";		
+		print "</tr>";		
 	}	
 	if ($IDNo eq "") {
 		if ($sortby eq "") {		
@@ -484,11 +484,11 @@ sub displayclone
 	# note: clones are not reviewed.  They go directly to sql implementation instructions.
 	# there is no reviewer status for this MMT object
 	print "<div id=\"tableContainer\">\n";
-	print "<table id=\"mainTable\" cellspacing=\"0\">\n";	
-	print "<thead><tr><th colspan=7 align=center><strong><font color=blue>Clone</font> Submissions</strong></th></tr>\n";
+	print "<table cellspacing=\"0\">\n";
+	print "<th colspan=7 align=center><strong><font color=blue>Clone</font> Submissions</strong></th>\n";
 	print "<tr><th width=10%>Submit Date</th><th>Submitter</th><th>Originating Site/Facility</th><th>Originating Datastream Class(es)</th><th>Destination Site/Facility</th><th>Destination Datastream Class(es)";
 	print "<th width=20%>ARCHIVE DB Status</th>\n";
-	print "</tr></thead>";
+	print "</tr>";
 	if (!defined $sth_getIDs) { die "Cannot  statement: $DBI::errstr\n"; }
 	$sth_getIDs->execute;
 	while ($getIDs = $sth_getIDs->fetch) {
@@ -717,21 +717,11 @@ sub displaysite
 	$countstar=0;
 	if (!defined $sth_getIDs) { die "Cannot  statement: $DBI::errstr\n"; }
 	$sth_getIDs->execute;
-	$sth_checkds = $dbh->prepare("SELECT count(*),count(*) from DS where IDNo=?");
-	$sth_getmaxcommentdate = $dbh->prepare("SELECT commentDate,DATE_PART('year',commentDate),DATE_PART('month',commentDate),DATE_PART('day',commentDate) from comments where IDNo=? and commentDate=(SELECT max(commentDate) from comments where IDNo=?)");			
-	$sth_getmaxstatusdate = $dbh->prepare("SELECT statusDate,DATE_PART('year',statusDate),DATE_PART('month',statusDate),DATE_PART('day',statusDate) from reviewerStatus where IDNo=? and statusDate=(SELECT max(statusDate) from reviewerStatus where IDNo=?)");
-	$sth_getmaxentrydate = $dbh->prepare("SELECT entry_date,DATE_PART('year',entry_date),DATE_PART('month',entry_date),DATE_PART('day',entry_date) from IDs where IDNo=?");
-	$sth_getnewsites = $dbh->prepare("SELECT sites.IDNo,site,site_name,start_date,end_date,sites.site_type,$peopletab.name_last,$peopletab.name_first,stype_desc,DATE_PART('year',start_date),DATE_PART('month',start_date),DATE_PART('day',start_date),DATE_PART('year',end_date),DATE_PART('month',end_date),DATE_PART('day',end_date),statusFlag,production,IDs.entry_date from sites,$peopletab,site_type_desc,IDs WHERE sites.submitter=$peopletab.person_id AND sites.IDNo=? AND sites.site_type=site_type_desc.site_type and sites.IDNo=IDs.IDNo");
-	$sth_getstatdesc=$dbh->prepare("SELECT status,statusDesc from revStatus where status=?");
-	$sth_getDBstatdesc=$dbh->prepare("SELECT status,statusDesc from status where status=?");
-	$sth_getarchive = $dbh->prepare("SELECT distinct upper(site_code),site_name,DATE_PART('year',start_date),DATE_PART('month',start_date),DATE_PART('day',start_date),DATE_PART('year',end_date),DATE_PART('month',end_date),DATE_PART('day',end_date),production,site_type from $archivedb.$siteinfotab where upper(site_code)=?");
-	$sth_countcomments = $dbh->prepare("SELECT count(*),count(*) from comments where IDNo=?");
-	$sth_getpdesc=$dbh->prepare("SELECT prodType,prodTypeDesc from prod_type_desc WHERE prodType=?");
 	while ($getIDs = $sth_getIDs->fetch) {
 		$skip=0;
 		$Idno = $getIDs->[0];
+		$sth_checkds = $dbh->prepare("SELECT count(*),count(*) from DS where IDNo=$Idno");
 		if (!defined $sth_checkds) { die "Cannot  statement: $DBI::errstr\n"; }
-		$sth_checkds->bind_param(1, $Idno);
 		$sth_checkds->execute;
 		while ($checkds = $sth_checkds->fetch) {
 			$skip=$checkds->[0];
@@ -773,9 +763,8 @@ sub displaysite
 			$ncomment_date="";
 			$nstatus_date="";
 			# getmaxcommentdate, getmaxstatusdate and getmaxentrydate are used to try and determine what was the latest date for any action with the submission			
+			$sth_getmaxcommentdate = $dbh->prepare("SELECT commentDate,DATE_PART('year',commentDate),DATE_PART('month',commentDate),DATE_PART('day',commentDate) from comments where IDNo=$Idno and commentDate=(SELECT max(commentDate) from comments where IDNo=$Idno)");			
 			if (!defined $sth_getmaxcommentdate) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_getmaxcommentdate->bind_param(1, $Idno);
-			$sth_getmaxcommentdate->bind_param(2, $Idno);
 			$sth_getmaxcommentdate->execute;
 			while($getmaxcommentdate = $sth_getmaxcommentdate->fetch) {
 				$comment_date=$getmaxcommentdate->[0];
@@ -811,9 +800,8 @@ sub displaysite
 				}				
 			}
 			
+			$sth_getmaxstatusdate = $dbh->prepare("SELECT statusDate,DATE_PART('year',statusDate),DATE_PART('month',statusDate),DATE_PART('day',statusDate) from reviewerStatus where IDNo=$Idno and statusDate=(SELECT max(statusDate) from reviewerStatus where IDNo=$Idno)");
 			if (!defined $sth_getmaxstatusdate) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_getmaxstatusdate->bind_param(1, $Idno);
-			$sth_getmaxstatusdate->bind_param(2, $Idno);
 			$sth_getmaxstatusdate->execute;
 			while ($getmaxstatusdfate = $sth_getmaxstatusdate->fetch) {
 				$status_date=$getmaxstatusdate->[0];
@@ -848,8 +836,8 @@ sub displaysite
 					$nstatus_date="";
 				}			
 			}
+			$sth_getmaxentrydate = $dbh->prepare("SELECT entry_date,DATE_PART('year',entry_date),DATE_PART('month',entry_date),DATE_PART('day',entry_date) from IDs where IDNo=$Idno");
 			if (!defined $sth_getmaxentrydate) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_getmaxentrydate->bind_param(1, $Idno);
 			$sth_getmaxentrydate->execute;
 			while ($getmaxentrydate = $sth_getmaxentrydate->fetch) {
 				$entry_date=$getmaxentrydate->[0];
@@ -910,8 +898,8 @@ sub displaysite
 			$nupdate_date="$upm"."-"."$upd"."-"."$upy";
 			$nupdate_date="$upy"."-"."$upm"."-"."$upd";
 			$entry_date="$yyentry_date"."-"."$mmentry_date"."-"."$ddentry_date";
+			$sth_getnewsites = $dbh->prepare("SELECT sites.IDNo,site,site_name,start_date,end_date,sites.site_type,$peopletab.name_last,$peopletab.name_first,stype_desc,DATE_PART('year',start_date),DATE_PART('month',start_date),DATE_PART('day',start_date),DATE_PART('year',end_date),DATE_PART('month',end_date),DATE_PART('day',end_date),statusFlag,production,IDs.entry_date from sites,$peopletab,site_type_desc,IDs WHERE sites.submitter=$peopletab.person_id AND sites.IDNo=$Idno AND sites.site_type=site_type_desc.site_type and sites.IDNo=IDs.IDNo");
 			if (!defined $sth_getnewsites) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_getnewsites->bind_param(1, $Idno);
 			$sth_getnewsites->execute;
 			while ($getnewsites = $sth_getnewsites->fetch) {
 				$checkstatthisone=0;
@@ -958,8 +946,8 @@ sub displaysite
 					$senddate="";
 				}
 				$REVstatdesc="";
+				$sth_getstatdesc=$dbh->prepare("SELECT status,statusDesc from revStatus where status=$REVstat");
 				if (!defined $sth_getstatdesc) { die "Cannot  statement: $DBI::errstr\n"; }
-				$sth_getstatdesc->bind_param(1, $REVstat);
 				$sth_getstatdesc->execute;
 				while ($getstatdesc = $sth_getstatdesc->fetch) {
 					$REVstatdesc=$getstatdesc->[1];
@@ -978,8 +966,8 @@ sub displaysite
 
 				}
 				$DBstatdesc="";
+				$sth_getDBstatdesc=$dbh->prepare("SELECT status,statusDesc from status where status=$DBstat");
 				if (!defined $sth_getDBstatdesc) { die "Cannot  statement: $DBI::errstr\n"; }
-				$sth_getDBstatdesc->bind_param(1, $DBstat);
 				$sth_getDBstatdesc->execute;
 				while ($getDBstatdesc = $sth_getDBstatdesc->fetch) {
 					$DBstatdesc=$getDBstatdesc->[1];
@@ -997,8 +985,8 @@ sub displaysite
 				$origenddy="";
 				$origproduction="";
 				$origsitetype="";		
+				$sth_getarchive = $dbh->prepare("SELECT distinct upper(site_code),site_name,DATE_PART('year',start_date),DATE_PART('month',start_date),DATE_PART('day',start_date),DATE_PART('year',end_date),DATE_PART('month',end_date),DATE_PART('day',end_date),production,site_type from $archivedb.$siteinfotab where upper(site_code)='$site'");
 				if (!defined $sth_getarchive) { die "Cannot  statement: $DBI::errstr\n"; }
-				$sth_getarchive->bind_param(1, $site);
 				$sth_getarchive->execute;
 				while ($getarchive = $sth_getarchive->fetch) {
 					$origsite=$getarchive->[0];
@@ -1052,8 +1040,8 @@ sub displaysite
 					$exist=1;
 				}
 				$numofcomments=0;	
+				$sth_countcomments = $dbh->prepare("SELECT count(*),count(*) from comments where IDNo=$Idno");
 				if (!defined $sth_countcomments) { die "Cannot  statement: $DBI::errstr\n"; }
-				$sth_countcomments->bind_param(1, $Idno);
 				$sth_countcomments->execute;
 				while ($countcomments = $sth_countcomments->fetch) {
 					$numofcomments = $countcomments->[0];
@@ -1093,8 +1081,8 @@ sub displaysite
 					print "<td>$site_type_desc</td>\n";
 				}
 				$pdesc="";
+				$sth_getpdesc=$dbh->prepare("SELECT prodType,prodTypeDesc from prod_type_desc WHERE prodType='$production'");
 				if (!defined $sth_getpdesc) { die "Cannot  statement: $DBI::errstr\n"; }
-				$sth_getpdesc->bind_param(1, $production);
 				$sth_getpdesc->execute;
 				while ($getpdesc = $sth_getpdesc->fetch) {
 					$pdesc=$getpdesc->[1];
@@ -1135,11 +1123,11 @@ sub displayfac
 	my $password=$password;
 	my $dbh = DBI->connect($dsn,$userid,$password,  {'RaiseError'=> 1}) or die $DBI::errstr;      
 	print "<div id=\"tableContainer\">\n";
-	print "<table id=\"mainTable\" cellspacing=\"0\">\n";	
-	print "<thead><tr><th colspan=9 align=center><strong><font color=blue>Facility</font> Submissions for Review</strong></th></tr>\n";
+	print "<table cellspacing=\"0\">\n";
+	print "<th colspan=9 align=center><strong><font color=blue>Facility</font> Submissions for Review</strong></th>\n";
 	print "<tr><th width=10%><br>Submit Date</th><th width=10%><br>Latest Update</th><th width=10%><br>Submitter</th><th width=15%><br />Site</th><th width=30%><font color=blue><br />Facilities</font></th><th width=10%>Facility Start Date<br />(YYYY-MM-DD)</th><th width=10%>Facility End Date<br />(YYYY-MM-DD)</th><th width=10%>Review<br />Status</th>\n";
 	print "<th width=10%>DB (ARM_int)<br />Status</th>\n";
-	print "</tr></thead>";
+	print "</tr>";
 	my $IDNo = shift;
 	my $sortby = shift;
 	my $Idno="";
@@ -1154,32 +1142,13 @@ sub displayfac
 	$countstar=0;
 	if (!defined $sth_getIDs) { die "Cannot  statement: $DBI::errstr\n"; }
 	$sth_getIDs->execute;
-	$sth_checkds = $dbh->prepare("SELECT count(*),count(*) from DS where IDNo=?");
-	$sth_getmaxcommentdate = $dbh->prepare("SELECT commentDate,DATE_PART('year',commentDate),DATE_PART('month',commentDate),DATE_PART('day',commentDate) from comments where IDNo=? and commentDate=(SELECT max(commentDate) from comments where IDNo=?)");
-	$sth_getmaxstatusdate = $dbh->prepare("SELECT statusDate,DATE_PART('year',statusDate),DATE_PART('month',statusDate),DATE_PART('day',statusDate) from reviewerStatus where IDNo=? and statusDate=(SELECT max(statusDate) from reviewerStatus where IDNo=?)");
-	$sth_getmaxentrydate = $dbh->prepare("SELECT entry_date,DATE_PART('year',entry_date),DATE_PART('month',entry_date),DATE_PART('day',entry_date) from IDs where IDNo=?");
-	$sth_gets = $dbh->prepare("SELECT distinct IDNo,site from facilities where IDNo=?");
-	$sth_checksite1 = $dbh->prepare("SELECT distinct upper(site_code),site_name from $archivedb.$siteinfotab where upper(site_code)=?");
-	$sth_checksite2 = $dbh->prepare("SELECT distinct IDNo,site,site_name from sites where site=?");
-	$sth_getsubm = $dbh->prepare("SELECT distinct $peopletab.name_first,$peopletab.name_last from facilities,$peopletab WHERE facilities.submitter=$peopletab.person_id AND facilities.IDNo=?");
-	$sth_getfac = $dbh->prepare("SELECT IDNo,facility_code,facility_name,eff_date,end_date,DATE_PART('year',eff_date),DATE_PART('month',eff_date),DATE_PART('day',eff_date),DATE_PART('year',end_date),DATE_PART('month',end_date),DATE_PART('day',end_date),statusFlag from facilities WHERE facilities.IDNo=? order by facility_code");
-	$sth_chka = $dbh->prepare("SELECT count(*),count(*) from $archivedb.$facinfotab where upper(site_code)=? and facility_code=? and facility_name=?");
-	$sth_checkb = $dbh->prepare("SELECT count(*),count(*) from $archivedb.$facinfotab where upper(site_code)=? and facility_code=?");
-	$sth_checkc = $dbh->prepare("SELECT count(*),count(*) from $archivedb.$facinfotab where upper(site_code)=? and facility_code=? and eff_date=?");
-	$sth_doublecheck1 = $dbh->prepare("SELECT DATE_PART('year',eff_date),DATE_PART('month',eff_date),DATE_PART('day',eff_date) from $archivedb.$facinfotab where upper(site_code)=? and facility_code=?");
-	$sth_checkd = $dbh->prepare("SELECT count(*),count(*) from $archivedb.$facinfotab where upper(site_code)=? and facility_code=? and end_date=?");
-	$sth_doublecheck2 = $dbh->prepare("SELECT DATE_PART('year',end_date),DATE_PART('month',end_date),DATE_PART('day',end_date) from $archivedb.$facinfotab where upper(site_code)=? and facility_code=?");
-	$sth_checke = $dbh->prepare("SELECT count(*),count(*) from $archivedb.$facinfotab where upper(site_code)=? and facility_code=? and facility_name=?");
-	$sth_getstatdesc = $dbh->prepare("SELECT status,statusDesc from revStatus where status=?");
-	$sth_getDBstatdesc = $dbh->prepare("SELECT status,statusDesc from status where status=?");
-	$sth_countcomments = $dbh->prepare("SELECT count(*),count(*) from comments where IDNo=?");
 	while ($getIDs = $sth_getIDs->fetch) {
 		$exist=0;
 		$checkstatthisone=0;
 		$Idno = $getIDs->[0];
 		$skip=0;
+		$sth_checkds = $dbh->prepare("SELECT count(*),count(*) from DS where IDNo=$Idno");
 		if (!defined $sth_checkds) { die "Cannot  statement: $DBI::errstr\n"; }
-		$sth_checkds->bind_param(1, $Idno);
 		$sth_checkds->execute;
 		while ($checkds = $sth_checkds->fetch) {
 			$skip=$checkds->[0];
@@ -1207,9 +1176,8 @@ sub displayfac
 			$ddentry_date="";
 			$ncomment_date="";
 			$nstatus_date="";
+			$sth_getmaxcommentdate = $dbh->prepare("SELECT commentDate,DATE_PART('year',commentDate),DATE_PART('month',commentDate),DATE_PART('day',commentDate) from comments where IDNo=$Idno and commentDate=(SELECT max(commentDate) from comments where IDNo=$Idno)");
 			if (!defined $sth_getmaxcommentdate) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_getmaxcommentdate->bind_param(1, $Idno);
-			$sth_getmaxcommentdate->bind_param(2, $Idno);
 			$sth_getmaxcommentdate->execute;
 			while ($getmaxcommentdate = $sth_getmaxcommentdate->fetch) {
 				$comment_date=$getmaxcommentdate->[0];
@@ -1244,9 +1212,9 @@ sub displayfac
 					$ncomment_date="";
 				}			
 			}
+			$sth_getmaxstatusdate = $dbh->prepare("SELECT statusDate,DATE_PART('year',statusDate),DATE_PART('month',statusDate),DATE_PART('day',statusDate) from reviewerStatus where IDNo=$Idno and statusDate=(SELECT max(statusDate) from reviewerStatus where IDNo=$Idno)");
+			
 			if (!defined $sth_getmaxstatusdate) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_getmaxstatusdate->bind_param(1, $Idno);
-			$sth_getmaxstatusdate->bind_param(2, $Idno);
 			$sth_getmaxstatusdate->execute;
 			while ($getmaxstatusdate = $sth_getmaxstatusdate->fetch) {
 				$status_date=$getmaxstatusdate->[0];
@@ -1281,8 +1249,8 @@ sub displayfac
 					$nstatus_date="";
 				}				
 			}
+			$sth_getmaxentrydate = $dbh->prepare("SELECT entry_date,DATE_PART('year',entry_date),DATE_PART('month',entry_date),DATE_PART('day',entry_date) from IDs where IDNo=$Idno");
 			if (!defined $sth_getmaxentrydate) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_getmaxentrydate->bind_param(1, $Idno);
 			$sth_getmaxentrydate->execute;
 			while ($getmaxentrydate = $sth_getmaxentrydate->fetch) {
 				$entry_date=$getmaxentrydate->[0];
@@ -1342,32 +1310,32 @@ sub displayfac
 			$upd = substr($update_date,6,2);
 			$nupdate_date="$upy"."-"."$upm"."-"."$upd";
 			$entry_date="$yyentry_date"."-"."$mmentry_date"."-"."$ddentry_date";
+			$sth_gets = $dbh->prepare("SELECT distinct IDNo,site from facilities where IDNo=$Idno");
 			if (!defined $sth_gets) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_gets->bind_param(1, $Idno);
 			$sth_gets->execute;
 			while ($gets = $sth_gets->fetch) {
 				$chksite = uc $gets->[1];
 			}
-			if (!defined $sth_checksite1) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_checksite1->bind_param(1, $chksite);
-			$sth_checksite1->execute;
-			while ($checksite = $sth_checksite1->fetch) {
+			$sth_checksite = $dbh->prepare("SELECT distinct upper(site_code),site_name from $archivedb.$siteinfotab where upper(site_code)='$chksite'");
+			if (!defined $sth_checksite) { die "Cannot  statement: $DBI::errstr\n"; }
+			$sth_checksite->execute;
+			while ($checksite = $sth_checksite->fetch) {
 				$chksite=$checksite->[0];
 				$site_name=$checksite->[1];
 				$inarch = 1;
 			}
 			if ($site_name eq "") {
-				if (!defined $sth_checksite2) { die "Cannot  statement: $DBI::errstr\n"; }
-				$sth_checksite2->bind_param(1, $chksite);
-				$sth_checksite2->execute;
-				while ($checksite = $sth_checksite2->fetch) {
+				$sth_checksite = $dbh->prepare("SELECT distinct IDNo,site,site_name from sites where site='$chksite'");
+				if (!defined $sth_checksite) { die "Cannot  statement: $DBI::errstr\n"; }
+				$sth_checksite->execute;
+				while ($checksite = $sth_checksite->fetch) {
 					$chksite=$checksite->[1];
 					$site_name=$checksite->[2];
 				}
 			}
 			$submitter="";
+			$sth_getsubm = $dbh->prepare("SELECT distinct $peopletab.name_first,$peopletab.name_last from facilities,$peopletab WHERE facilities.submitter=$peopletab.person_id AND facilities.IDNo=$Idno");
 			if (!defined $sth_getsubm) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_getsubm->bind_param(1, $Idno);
 			$sth_getsubm->execute;
 			while ($getsubm = $sth_getsubm->fetch) {
 				$submitter="$getsubm->[0]"." $getsubm->[1]";
@@ -1398,8 +1366,8 @@ sub displayfac
 			$printfmst="";
 			$printfmend="";
 			$statflag="";
+			$sth_getfac = $dbh->prepare("SELECT IDNo,facility_code,facility_name,eff_date,end_date,DATE_PART('year',eff_date),DATE_PART('month',eff_date),DATE_PART('day',eff_date),DATE_PART('year',end_date),DATE_PART('month',end_date),DATE_PART('day',end_date),statusFlag from facilities WHERE facilities.IDNo=$Idno order by facility_code");
 			if (!defined $sth_getfac) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_getfac->bind_param(1, $Idno);
 			$sth_getfac->execute;
 			while ($getfac = $sth_getfac->fetch) {
 				$exist=0;
@@ -1457,19 +1425,16 @@ sub displayfac
 						$exist=0;
 					} else {
 						$ca=0;
+						$sth_chka = $dbh->prepare("SELECT count(*),count(*) from $archivedb.$facinfotab where upper(site_code)='$chksite' and facility_code='$facility_code' and facility_name='$facility_name'");
 						if (!defined $sth_chka) { die "Cannot  statement: $DBI::errstr\n"; }
-						$sth_chka->bind_param(1, $chksite);
-						$sth_chka->bind_param(2, $facility_code);
-						$sth_chka->bind_param(3, $facility_name);
 						$sth_chka->execute;
 						while ($chka = $sth_chka->fetch) {
 							$ca=$chka->[0];
 						}
 						if ($ca == 0) {
 							$cb = 0;
+							$sth_checkb = $dbh->prepare("SELECT count(*),count(*) from $archivedb.$facinfotab where upper(site_code)='$chksite' and facility_code='$facility_code'");
 							if (!defined $sth_checkb) { die "Cannot  statement: $DBI::errstr\n"; }
-							$sth_checkb->bind_param(1, $chksite);
-							$sth_checkb->bind_param(2, $facility_code);
 							$sth_checkb->execute;
 							while ($checkb = $sth_checkb->fetch) {
 								$cb=$checkb->[0];
@@ -1487,12 +1452,11 @@ sub displayfac
 						}
 						$ca=0;
 						
-						if (!defined $sth_checkc) { die "Cannot  statement: $DBI::errstr\n"; }
-						$sth_checkc->bind_param(1, $chksite);
-						$sth_checkc->bind_param(2, $facility_code);
-						$sth_checkc->bind_param(3, $fmstdate);
-						$sth_checkc->execute;
-						while ($chka = $sth_checkc->fetch) {
+						$sth_chka = $dbh->prepare("SELECT count(*),count(*) from $archivedb.$facinfotab where upper(site_code)='$chksite' and facility_code='$facility_code' and eff_date='$fmstdate'");
+						
+						if (!defined $sth_chka) { die "Cannot  statement: $DBI::errstr\n"; }
+						$sth_chka->execute;
+						while ($chka = $sth_chka->fetch) {
 							$ca=$chka->[0];
 						}
 						if ($ca == 0) {
@@ -1500,11 +1464,10 @@ sub displayfac
 							$fsm="";
 							$fsd="";
 							$fstart="";
-							if (!defined $sth_doublecheck1) { die "Cannot  statement: $DBI::errstr\n"; }
-							$sth_doublecheck1->bind_param(1, $chksite);
-							$sth_doublecheck1->bind_param(2, $facility_code);
-							$sth_doublecheck1->execute;
-							while ($doublecheck = $sth_doublecheck1->fetch) {
+							$sth_doublecheck=$dbh->prepare("SELECT DATE_PART('year',eff_date),DATE_PART('month',eff_date),DATE_PART('day',eff_date) from $archivedb.$facinfotab where upper(site_code)='$chksite' and facility_code='$facility_code'");
+							if (!defined $sth_doublecheck) { die "Cannot  statement: $DBI::errstr\n"; }
+							$sth_doublecheck->execute;
+							while ($doublecheck = $sth_doublecheck->fetch) {
 								$fsy=$doublecheck->[0];
 								$len=0;
 								$len = length $doublecheck->[1];
@@ -1531,12 +1494,10 @@ sub displayfac
 							$printfmst="$reformatstdate";
 						}
 						$ca=0;
-						if (!defined $sth_checkd) { die "Cannot  statement: $DBI::errstr\n"; }
-						$sth_checkd->bind_param(1, $chksite);
-						$sth_checkd->bind_param(2, $facility_code);
-						$sth_checkd->bind_param(3, $fmenddate);
-						$sth_checkd->execute;
-						while ($chka = $sth_checkd->fetch) {
+						$sth_chka = $dbh->prepare("SELECT count(*),count(*) from $archivedb.$facinfotab where upper(site_code)='$chksite' and facility_code='$facility_code' and end_date='$fmenddate'");
+						if (!defined $sth_chka) { die "Cannot  statement: $DBI::errstr\n"; }
+						$sth_chka->execute;
+						while ($chka = $sth_chka->fetch) {
 							$ca=$chka->[0];
 						}
 						if ($ca == 0) {
@@ -1544,11 +1505,10 @@ sub displayfac
 							$fem="";
 							$fed="";
 							$fend="";
-							if (!defined $sth_doublecheck2) { die "Cannot  statement: $DBI::errstr\n"; }
-							$sth_doublecheck2->bind_param(1, $chksite);
-							$sth_doublecheck2->bind_param(2, $facility_code);
-							$sth_doublecheck2->execute;
-							while ($doublecheck = $sth_doublecheck2->fetch) {
+							$sth_doublecheck=$dbh->prepare("SELECT DATE_PART('year',end_date),DATE_PART('month',end_date),DATE_PART('day',end_date) from $archivedb.$facinfotab where upper(site_code)='$chksite' and facility_code='$facility_code'");
+							if (!defined $sth_doublecheck) { die "Cannot  statement: $DBI::errstr\n"; }
+							$sth_doublecheck->execute;
+							while ($doublecheck = $sth_doublecheck->fetch) {
 								$fey=$doublecheck->[0];
 								$len=0;
 								$len = length $doublecheck->[1];
@@ -1585,19 +1545,16 @@ sub displayfac
 						$exist=0;
 					} else {
 						$ca=0;	
-						if (!defined $sth_checke) { die "Cannot  statement: $DBI::errstr\n"; }
-						$sth_checke->bind_param(1, $chksite);
-						$sth_checke->bind_param(2, $facility_code);
-						$sth_checke->bind_param(3, $facility_name);
-						$sth_checke->execute;
-						while ($chka = $sth_checke->fetch) {
+						$sth_chka = $dbh->prepare("SELECT count(*),count(*) from $archivedb.$facinfotab where upper(site_code)='$chksite' and facility_code='$facility_code' and facility_name='$facility_name'");
+						if (!defined $sth_chka) { die "Cannot  statement: $DBI::errstr\n"; }
+						$sth_chka->execute;
+						while ($chka = $sth_chka->fetch) {
 							$ca=$chka->[0];
 						}
 						if ($ca == 0) {
 							$cb = 0;
+							$sth_checkb = $dbh->prepare("SELECT count(*),count(*) from $archivedb.$facinfotab where upper(site_code)='$chksite' and facility_code='$facility_code'");
 							if (!defined $sth_checkb) { die "Cannot  statement: $DBI::errstr\n"; }
-							$sth_checkb->bind_param(1, $chksite);
-							$sth_checkb->bind_param(2, $facility_code);
 							$sth_checkb->execute;
 							while ($checkb = $sth_checkb->fetch) {
 								$cb=$checkb->[0];
@@ -1614,12 +1571,10 @@ sub displayfac
 							$exist=1;
 						}
 						$ca=0;
-						if (!defined $sth_checkc) { die "Cannot  statement: $DBI::errstr\n"; }
-						$sth_checkc->bind_param(1, $chksite);
-						$sth_checkc->bind_param(2, $facility_code);
-						$sth_checkc->bind_param(3, $fmstdate);
-						$sth_checkc->execute;
-						while ($chka = $sth_checkc->fetch) {
+						$sth_chka = $dbh->prepare("SELECT count(*),count(*) from $archivedb.$facinfotab where upper(site_code)='$chksite' and facility_code='$facility_code' and eff_date='$fmstdate'");
+						if (!defined $sth_chka) { die "Cannot  statement: $DBI::errstr\n"; }
+						$sth_chka->execute;
+						while ($chka = $sth_chka->fetch) {
 							$ca=$chka->[0];
 						}
 						if ($ca == 0) {
@@ -1627,11 +1582,10 @@ sub displayfac
 							$fsm="";
 							$fsd="";
 							$fstart="";
-							if (!defined $sth_doublecheck1) { die "Cannot  statement: $DBI::errstr\n"; }
-							$sth_doublecheck1->bind_param(1, $chksite);
-							$sth_doublecheck1->bind_param(2, $facility_code);
-							$sth_doublecheck1->execute;
-							while ($doublecheck = $sth_doublecheck1->fetch) {
+							$sth_doublecheck=$dbh->prepare("SELECT DATE_PART('year',eff_date),DATE_PART('month',eff_date),DATE_PART('day',eff_date) from $archivedb.$facinfotab where upper(site_code)='$chksite' and facility_code='$facility_code'");
+							if (!defined $sth_doublecheck) { die "Cannot  statement: $DBI::errstr\n"; }
+							$sth_doublecheck->execute;
+							while ($doublecheck = $sth_doublecheck->fetch) {
 								$fsy=$doublecheck->[0];
 								$len=0;
 								$len = length $doublecheck->[1];
@@ -1660,12 +1614,10 @@ sub displayfac
 							$printfmst="$printfmst"."<br>"."$reformatstdate";
 						}
 						$ca=0;
-						if (!defined $sth_checkd) { die "Cannot  statement: $DBI::errstr\n"; }
-						$sth_checkd->bind_param(1, $chksite);
-						$sth_checkd->bind_param(2, $facility_code);
-						$sth_checkd->bind_param(3, $fmenddate);
-						$sth_checkd->execute;
-						while ($chka = $sth_checkd->fetch) {
+						$sth_chka = $dbh->prepare("SELECT count(*),count(*) from $archivedb.$facinfotab where upper(site_code)='$chksite' and facility_code='$facility_code' and end_date='$fmenddate'");
+						if (!defined $sth_chka) { die "Cannot  statement: $DBI::errstr\n"; }
+						$sth_chka->execute;
+						while ($chka = $sth_chka->fetch) {
 							$ca=$chka->[0];
 						}
 						if ($ca == 0) {
@@ -1673,11 +1625,10 @@ sub displayfac
 							$fem="";
 							$fed="";
 							$fend="";
-							if (!defined $sth_doublecheck2) { die "Cannot  statement: $DBI::errstr\n"; }
-							$sth_doublecheck2->bind_param(1, $chksite);
-							$sth_doublecheck2->bind_param(2, $facility_code);
-							$sth_doublecheck2->execute;
-							while ($doublecheck = $sth_doublecheck2->fetch) {
+							$sth_doublecheck=$dbh->prepare("SELECT DATE_PART('year',end_date),DATE_PART('month',end_date),DATE_PART('day',end_date) from $archivedb.$facinfotab where upper(site_code)='$chksite' and facility_code='$facility_code'");
+							if (!defined $sth_doublecheck) { die "Cannot  statement: $DBI::errstr\n"; }
+							$sth_doublecheck->execute;
+							while ($doublecheck = $sth_doublecheck->fetch) {
 								$fey=$doublecheck->[0];
 								$len=0;
 								$len = length $doublecheck->[1];
@@ -1712,15 +1663,15 @@ sub displayfac
 			}
 			$printfac="$printfac"."<br><a href=\"reviewMetaData.pl?IDNo=$Idno\" style=\"text-decoration:none; color:blue;\">[MMT-ID#: $Idno]</a>";
 			$REVstatdesc="";
+			$sth_getstatdesc=$dbh->prepare("SELECT status,statusDesc from revStatus where status=$REVstat");
 			if (!defined $sth_getstatdesc) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_getstatdesc->bind_param(1, $REVstat);
 			$sth_getstatdesc->execute;
 			while ($getstatdesc = $sth_getstatdesc->fetch) {
 				$REVstatdesc=$getstatdesc->[1];
 			}
 			$DBstatdesc="";
+			$sth_getDBstatdesc=$dbh->prepare("SELECT status,statusDesc from status where status=$DBstat");
 			if (!defined $sth_getDBstatdesc) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_getDBstatdesc->bind_param(1, $DBstat);
 			$sth_getDBstatdesc->execute;
 			while ($getDBstatdesc = $sth_getDBstatdesc->fetch) {
 				$DBstatdesc=$getDBstatdesc->[1];
@@ -1737,8 +1688,8 @@ sub displayfac
 				$dbfontcolor="blue";
 			}
 			$numofcomments=0;
+			$sth_countcomments = $dbh->prepare("SELECT count(*),count(*) from comments where IDNo=$Idno");
 			if (!defined $sth_countcomments) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_countcomments->bind_param(1, $Idno);
 			$sth_countcomments->execute;
 			while ($countcomments = $sth_countcomments->fetch) {
 				$numofcomments = $countcomments->[0];
@@ -1785,18 +1736,18 @@ sub displayinstclass
 	}
 	if ($sortable == 0) {
 		print "<div id=\"tableContainer\">\n";
-		print "<table id=\"mainTable\" cellspacing=\"0\">\n";	
-		print "<thead><tr><th colspan=11 align=center><strong><font color=blue>Instrument Class</font> Submissions for Review</strong></th><tr>\n";
+		print "<table cellspacing=\"0\">\n";
+		print "<th colspan=11 align=center><strong><font color=blue>Instrument Class</font> Submissions for Review</strong></th>\n";
 		print "<tr><th width=10%>Submit Date</th><th width=10%>Latest Update</th><th width=10%>Submitter</th><th width=15%><font color=blue>Instrument Class</font></th><th width=15%>Instrument Class Name</th><th width=20%>Contact</th><th width=20%>Web Page Description</th><th width=20%>Instrument Categories</th><th width=10%>Source Classes</th><th>Review Status</th>\n";
 		print "<th>DB (ARM_int) Status</th>\n";
-		print "</tr></thead>";
+		print "</tr>";
 	} else {
 		print "<div id=\"tableContainer\">\n";
-		print "<table id=\"mainTable\" cellspacing=\"0\">\n";	
-		print "<thead><tr><th colspan=11 align=center><strong><font color=blue>Instrument Class</font> Submissions for Review</strong></th></tr>\n";
+		print "<table cellspacing=\"0\">\n";	
+		print "<th colspan=11 align=center><strong><font color=blue>Instrument Class</font> Submissions for Review</strong></th>\n";
 		print "<tr><th width=10%><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=I&sortby=entry_date\" style=\"text-decoration: none; color:black\">Submit Date</a></th><th width=10%>Latest Update</th><th width=10%><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=I&sortby=submitter\" style=\"text-decoration: none; color:black\">Submitter</a></th><th width=10%><font color=\"green\"><strong>+ </strong></font><font color=blue><a href=\"MMTMetaData.pl?type=I&sortby=instrument\" style=\"text-decoration: none;color: blue\">Instrument Class</a></font></th><th width=15%>Instrument Class Name</th><th width=20%>Contact</th><th width=20%>Web Page Description</th><th width=20%>Instrument Categories</th><th width=10%>Source Classes</th><th><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=I&sortby=rstatus\" style=\"text-decoration: none; color: black\">Review Status</a></th>\n";
 		print "<th><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=I&sortby=dbstatus\" style=\"text-decoration: none\">DB (ARM_int) Status</a></th>\n";
-		print "</tr></thead>";		
+		print "</tr>";		
 	}
 	$countminus=0;
 	$countstar=0;
@@ -2333,15 +2284,15 @@ sub displayinstcode
 	#print "IDNo $IDNo<br>\n";
 	if ($sortable == 0) {
 		print "<div id=\"tableContainer\">\n";
-		print "<table id=\"mainTable\" cellspacing=\"0\">\n";	
-		print "<thead><tr><th colspan=9 align=center><strong><font color=blue>Instrument Code</font> Submissions for Review</strong></th></tr>\n";
+		print "<table cellspacing=\"0\">\n";
+		print "<th colspan=9 align=center><strong><font color=blue>Instrument Code</font> Submissions for Review</strong></th>\n";
 		print "<tr><th width=10%>Submit Date</th><th width=10%>Latest Update</th><th width=10%>Submitter</th><th width=15%><font color=blue>Instrument Code</font></th><th width=20%>Instrument Code Name</th><th width=10%>Instrument Class</th><th width=15%>Review Status</th>\n";
 		print "<th width=15%>DB (ARM_int) Status</th>\n";
-		print "</tr></thead>";
+		print "</tr>";
 	} else {
 		print "<div id=\"tableContainer\">\n";
-		print "<table id=\"mainTable\" cellspacing=\"0\">\n";	
-		print "<thead><tr><th colspan=9 align=center><strong><font color=blue>Instrument Code</font> Submissions for Review</strong></th></tr>\n";
+		print "<table cellspacing=\"0\">\n";	
+		print "<th colspan=9 align=center><strong><font color=blue>Instrument Code</font> Submissions for Review</strong></th>\n";
 		print "<tr><th width=10%><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=IC&sortby=entry_date\" style=\"text-decoration: none; color:black\">Submit Date</a></th>\n";
 		print "<th width=10%>Latest Update</th>\n";
 		print "<th width=10%><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=IC&sortby=submitter\" style=\"text-decoration: none; color:black\">Submitter</a></th>\n";
@@ -2349,7 +2300,7 @@ sub displayinstcode
 		print "<th width=20%>Instrument Code Name</th>\n";
 		print "<th width=10%>Instrument Class</th><th width=15%><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=IC&sortby=rstatus\" style=\"text-decoration: none; color: black\">Review Status</a></th>\n";
 		print "<th width=15%><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=IC&sortby=dbstatus\" style=\"text-decoration: none\">DB (ARM_int) Status</a></th>\n";
-		print "</tr></thead>";		
+		print "</tr>";		
 	}
 	$countminus=0;
 	$countstar=0;
@@ -2764,18 +2715,18 @@ sub displaypmt
 	}
 	if ($sortable == 0) {
 		print "<div id=\"tableContainer\">\n";
-		print "<table id=\"mainTable\" cellspacing=\"0\">\n";	
-		print "<thead><tr><th colspan=9 align=center><strong><font color=blue>Primary Measurement Type</font> Submissions for Review</strong></th></tr>\n";
+		print "<table cellspacing=\"0\">\n";
+		print "<th colspan=9 align=center><strong><font color=blue>Primary Measurement Type</font> Submissions for Review</strong></th>\n";
 		print "<tr><th>Submit Date</th><th width=10%>Latest Update</th><th width=10%>Submitter</th><th><font color=blue>PMT</font></th><th>PMT Name</th><th>PMT Description</th><th>Meas Category Codes:Sub-Category Codes</th><th>Review Status</th>\n";
 		print "<th>DB (ARM_int) Status</th>\n";
-		print "</tr></thead>";
+		print "</tr>";
 	} else {
 		print "<div id=\"tableContainer\">\n";
-		print "<table id=\"mainTable\" cellspacing=\"0\">\n";	
-		print "<thead><tr><th colspan=9 align=center><strong><font color=blue>Primary Measurement Type</font> Submissions for Review</strong></th></tr>\n";
+		print "<table cellspacing=\"0\">\n";	
+		print "<th colspan=9 align=center><strong><font color=blue>Primary Measurement Type</font> Submissions for Review</strong></th>\n";
 		print "<tr><th width=10%><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=PMT&sortby=entry_date\" style=\"text-decoration: none; color:black\">Submit Date</a></th><th width=10%>Latest Update</th><th width=10%><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=PMT&sortby=submitter\" style=\"text-decoration: none; color:black\">Submitter</a></th><th><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=PMT&sortby=primmeas\" style=\"text-decoration: none; color:blue\">PMT</a></th><th>PMT Name</th><th>PMT Description</th><th>Meas Category Codes:Sub-Category Codes</th><th><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=PMT&sortby=rstatus\" style=\"text-decoration: none; color:black\">Review Status</a></th>\n";
 		print "<th><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=PMT&sortby=dbstatus\" style=\"text-decoration: none; color:black\">DB (ARM_int) Status</a></th>";
-		print "</tr></thead>";	
+		print "</tr>";	
 	}		
 	if ($IDNo eq "") {
 		if ($sortby eq "") {
@@ -3240,16 +3191,16 @@ sub displaydod
 	}
 	if ($sortable == 0) {
 		print "<div id=\"tableContainer\">\n";
-		print "<table id=\"mainTable\" cellspacing=\"0\">\n";	
-		print "<thead><tr><th colspan=14 align=center><strong><font color=blue>DOD</font> Submitted for Review</strong></th></tr>\n";
+		print "<table cellspacing=\"0\">\n";
+		print "<th colspan=14 align=center><strong><font color=blue>DOD</font> Submitted for Review</strong></th>\n";
 		print "<tr><th width=10%><br />Submit Date</th><th width=10%><br />Latest Update</th><th width=10%><br />Submitter</th><th width=15%><br />Contacts</th><th width=10%><font color=blue><br>DS Class (DS Class Desc)</font></th><th><br>DOD Version</th><th width=5%><br>Data Vol<br /> >8GB?</th><th width=5%><br>Site(s):Facility(ies)</th><th width=20%><br />Instrument Class</th><th><br>Source<br>Class</th><th width=10%><br>This<br>Release Type</th><th width=10%><br>Deadline?</th><th><br />DOD Review Status</th><th width=8%><br>DMF/XDC-Production Release</th>";
-		print "</tr></thead>";	
+		print "</tr>";	
 	} else {
 		print "<div id=\"tableContainer\">\n";
-		print "<table id=\"mainTable\" cellspacing=\"0\">\n";	
-		print "<thead><tr><th colspan=14 align=center><strong><font color=blue>DOD</font> Submissions for Review</strong></th></tr>\n";
+		print "<table cellspacing=\"0\">\n";	
+		print "<th colspan=14 align=center><strong><font color=blue>DOD</font> Submissions for Review</strong></th>\n";
 		print "<tr><th width=10%><br /><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=DOD&sortby=entry_date&filter=$filter\" style=\"text-decoration: none; color:black\">Submit Date</a></th><th width=10%><br>Latest Update</th><th width=10%><br /><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=DOD&sortby=submitter&filter=$filter\" style=\"text-decoration: none; color:black\">Submitter</a></th><th width=15%><br />Contacts</th><th width=10%><br><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=DOD&sortby=dsBase&filter=$filter\" style=\"text-decoration: none; color: blue\">DS Class (DS Class Desc)</a></th><th><br>DOD Version</th><th width=5%><br>Data Vol<br /> >8GB?</th><th width=5%><br>Site(s):Facility(ies)</th><th width=20%><br /><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=DOD&sortby=instrument&filter=$filter\" style=\"text-decoration: none; color:black\">Instrument Class</a></th><th><br>Source<br>Class</th><th><br>This<br>Release Type</th><th width=10%><br>Deadline?</th><th><br /><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=DOD&sortby=rstatus&filter=$filter\" style=\"text-decoration: none; color:black\">DOD Review Status</a></th><th width=8%><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=DOD&sortby=dbstatus&filter=$filter\" style=\"text-decoration: none; color:black\"><br>DMF/XDC-Production Release</th>";
-		print "</tr></thead>";	
+		print "</tr>";	
 	
 	}	
 	$filtclause="";
@@ -3947,12 +3898,14 @@ sub displayds
 	}
 	print "<p><br>\n";
 	if ($sortable == 0) {
+		print "<div id=\"tableContainer\">\n";
 		print "<table id=\"mainTable\" cellspacing=\"0\">\n";
-		print "<thead><tr><th colspan=110 align=\"center\"><strong><font color=blue>Datastream</font> Submissions for Review</strong></th></tr>\n";
+		print "<thead><tr><th colspan=110 align=\"center\"><strong><font color=blue>Datastream</font> Submissions for Review</strong></th>/tr>\n";
 		print "<tr><th width=10%><br>Submit Date</th><th witdh=10%><br>Latest Update</th><th><br>Submitter</th><th width=20% align=\"center\"><font color=blue>DS Class<br>(DS Class Desc)</font></th><th width=15% align=\"center\"><br />Contacts</th>";
 		print "<th>Instrument<br />Categories</th><th>Instrument<br />Class</th><th width=12%>Source<br>Classes</th><th width=20%>Measurement Categories: Sub-Categories</th><th width=30%>Primary Meas  Type: Short Name: Long Name of Primary Variables</th><th>Review<br>Status</th>\n";
 		print "</tr></thead>\n";
 	} else {
+		print "<div id=\"tableContainer\">\n";
 		print "<table id=\"mainTable\" cellspacing=\"0\">\n";	
 		print "<thead><tr><th colspan=11 align=\"center\"><strong><font color=blue>Datastream</font> Submissions for Review</strong></th></tr>\n";
 		print "<tr><th width=10%><br><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=DS&sortby=entry_date&filter=$filter&exabnd=$exabnd&searchresults=$searchresults\" style=\"text-decoration: none; color:black\">Submit Date</a></th><th width=10%><br>Latest Update</th><th width=15% align=\"center\"><font color=\"green\"><br /><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=DS&sortby=submitter&filter=$filter&exabnd=$exabnd&searchresults=$searchresults\" style=\"text-decoration: none; color:black\">Submitter</a></th><th width=20% align=\"center\"><font color=\"green\"><strong>+ </strong></font><a href=\"MMTMetaData.pl?type=DS&sortby=dsBase&filter=$filter&exabnd=$exabnd&searchresults=$searchresults\" style=\"text-decoration: none; color:blue\">DS Class<br>(DS Class Desc)</a></th><th width=15%><br />Contacts</th>";
@@ -5320,12 +5273,12 @@ sub displaycomment
 	}
 	print "<hr>\n";
 	if ($countcom > 0) {
-		print "<table id=\"mainTable\" cellspacing=\"0\">\n";	
-		print "<thead><tr>\n";
+		print "<table cellspacing=\"0\">\n";
+		print "<tr>\n";
 		print "<th rowspan=1 colspan=4 bgcolor=\"#FFF999\"><font color=red>Comment History</font></th></tr>\n";
 		print "<tr><th>Date</th>\n";
 		print "<th>Who</th>\n";
-		print "<th>Comment</th></tr></thead>\n";
+		print "<th>Comment</th></tr>\n";
 		$origdate="";
 		$origrev="";
 		$origid="";
@@ -8500,8 +8453,8 @@ sub displaystatus
 	while ($countfunc = $sth_countfunc->fetch) {
 		$howmanyfunc=$howmanyfunc + 1;
 	}
-	print "<table id=\"mainTable\" cellspacing=\"0\">\n";	
-	print "<thead><tr><th rowspan=1 colspan=$howmanyfunc bgcolor=\"#FFF999\"><font color=red>Current Status</font></th></tr></thead><tr>\n";
+	print "<table cellspacing=\"0\">\n";
+	print "<tr><th rowspan=1 colspan=$howmanyfunc bgcolor=\"#FFF999\"><font color=red>Current Status</font></th></tr><tr>\n";
 	$sth_getfunctions=$dbh->prepare("SELECT distinct revFuncsByType.revFunction,revFuncDesc from revFuncsByType,revFuncLookup WHERE type='$objct' and revFuncsByType.revFunction=revFuncLookup.revFunction order by revFuncNo");
 	if (!defined $sth_getfunctions) { die "Cannot  statement: $DBI::errstr\n"; }
 	$sth_getfunctions->execute;
