@@ -726,7 +726,7 @@ sub displaysite
 	$sth_getDBstatdesc=$dbh->prepare("SELECT status,statusDesc from status where status=?");
 	$sth_getarchive = $dbh->prepare("SELECT distinct upper(site_code),site_name,DATE_PART('year',start_date),DATE_PART('month',start_date),DATE_PART('day',start_date),DATE_PART('year',end_date),DATE_PART('month',end_date),DATE_PART('day',end_date),production,site_type from $archivedb.$siteinfotab where upper(site_code)=?");
 	$sth_countcomments = $dbh->prepare("SELECT count(*),count(*) from comments where IDNo=?");
-	$sth_getpdesc=$dbh->prepare("SELECT prodType,prodTypeDesc from prod_type_desc WHERE prodType=?");
+	$sth_getpdesc = $dbh->prepare("SELECT prodType,prodTypeDesc from prod_type_desc WHERE prodType=?");
 	while ($getIDs = $sth_getIDs->fetch) {
 		$skip=0;
 		$Idno = $getIDs->[0];
@@ -4006,8 +4006,46 @@ sub displayds
 	}		
 	$countstar=0;
 	$countminus=0;
-	if (!defined $sth_getIDs) { die "Cannot  statement : $DBI::errstr\n"; }
+	if (!defined $sth_getIDs) { die "Cannot  statement : $DBI::errstr - PROBLEM WITH LINE: $code\n\$!"; }
 	$sth_getIDs->execute;
+	$sth_getmaxcommentdate = $dbh->prepare("SELECT commentDate,DATE_PART('year',commentDate),DATE_PART('month',commentDate),DATE_PART('day',commentDate) from comments where IDNo=? and commentDate=(SELECT max(commentDate) from comments where IDNo=?)");
+	$sth_getmaxstatusdate = $dbh->prepare("SELECT statusDate,DATE_PART('year',statusDate),DATE_PART('month',statusDate),DATE_PART('day',statusDate) from reviewerStatus where IDNo=? and statusDate=(SELECT max(statusDate) from reviewerStatus where IDNo=?)");
+	$sth_getmaxentrydate = $dbh->prepare("SELECT entry_date,DATE_PART('year',entry_date),DATE_PART('month',entry_date),DATE_PART('day',entry_date) from IDs where IDNo=?");
+	$sth_getDS = $dbh->prepare("SELECT IDNo,dsBase,dsBaseDesc,dataLevel,$peopletab.name_last,$peopletab.name_first,DODversion from DS,$peopletab WHERE DS.submitter=$peopletab.person_id AND DS.IDNo=?");
+	$sth_countcomments = $dbh->prepare("SELECT count(*),count(*) from comments where IDNo=?");
+	$sth_getdodid = $dbh->prepare("SELECT IDNo,IDNo from DOD where dsBase=? and dataLevel=? and DODversion=?");
+	$sth_countdodfac = $dbh->prepare("SELECT count(*) from facilities where IDNo=?");
+	$sth_getdodfacs = $dbh->prepare("SELECT distinct site,facility_code from facilities where IDNo=?");
+	$sth_geti = $dbh->prepare("SELECT distinct instrument_class,instrument_class from instClass where IDNo=?");
+	$sth_getmentors1 = $dbh->prepare("SELECT distinct $grouprole.person_id,name_first,name_last,$grouprole.group_name,$grouprole.role_name,$grouprole.subrole_name from $grouprole,$peopletab WHERE $grouprole.person_id=$peopletab.person_id and $grouprole.role_name=upper(?) and $grouprole.group_name not like '%Reminder%'");
+	$sth_getmentors2 = $dbh->prepare("SELECT distinct instContacts.contact_id,name_first,name_last,instContacts.group_name,instContacts.role_name,instContacts.subrole_name from instContacts,$peopletab WHERE instContacts.role_name=upper(?) and instContacts.contact_id=$peopletab.person_id AND instContacts.contact_id not in (SELECT distinct person_id from $grouprole where $grouprole.role_name=upper(?))");
+	$sth_getinstcat = $dbh->prepare("SELECT distinct inst_category_code,statusFlag from instCats where IDNo=? order by inst_category_code");
+	$sth_getcurcats1 = $dbh->prepare("SELECT distinct $archivedb.$sitetoinstrinfotab.instrument_category_code,$archivedb.$sitetoinstrinfotab.instrument_category_code from $archivedb.$sitetoinstrinfotab,$archivedb.$dsinfotab WHERE $archivedb.$sitetoinstrinfotab.instrument_code=$archivedb.$dsinfotab.instrument_code and $archivedb.$sitetoinstrinfotab.instrument_code=? and $archivedb.$dsinfotab.data_level_code=? order by $archivedb.$sitetoinstrinfotab.instrument_category_code");
+	$sth_getcurcats2 = $dbh->prepare("SELECT distinct $archivedb.$dsvarnamemeascatstab.meas_category_code,$archivedb.$dsvarnamemeascatstab.meas_category_code,$archivedb.$dsvarnamemeascatstab.meas_subcategory_code from $archivedb.$dsvarnamemeascatstab where $archivedb.$dsvarnamemeascatstab.datastream like ? order by $archivedb.$dsvarnamemeascatstab.meas_category_code,$archivedb.$dsvarnamemeascatstab.meas_subcategory_code");
+	$sth_checkic1 = $dbh->prepare("SELECT count(*),count(*) from instCats where IDNo=? and inst_category_code=?");
+	$sth_checkic2 = $dbh->prepare("SELECT count(*),count(*) from instClass where IDNo=? and instrument_class=?");
+	$sth_getinstcl1 = $dbh->prepare("SELECT distinct IDNo,instrument_class from instClass where IDNo=? order by IDNo");
+	$sth_getinstcl2 = $dbh->prepare("SELECT distinct instrument_class,statusFlag from instClass where IDNo=? order by instrument_class");
+	$sth_getidsno = $dbh->prepare("SELECT distinct IDNo,instrument_class from instClass where instrument_class=?");
+	$sth_checkicagain = $dbh->prepare("SELECT inst_category_code,inst_category_code from instCats where IDNo=?");
+	$sth_checkarchive = $dbh->prepare("SELECT distinct instrument_category_code,instrument_category_code from $archivedb.$sitetoinstrinfotab where lower(instrument_class_code)=lower(?)");
+	$sth_getcurinst = $dbh->prepare("SELECT distinct instrument_code,instrument_class_code from $archivedb.$instrcodetoinstrclasstab where instrument_code=? order by instrument_code,instrument_class_code");
+	$sth_getscl = $dbh->prepare("SELECT distinct source_class,statusFlag from sourceClass where IDNo=? order by source_class");
+	$sth_getcursources = $dbh->prepare("SELECT distinct instrument_code,source_class_code,data_level_code from $archivedb.$dsinfotab where instrument_code=? and data_level_code=? order by source_class_code");
+	$sth_checkcursc = $dbh->prepare("SELECT IDNo,statusFlag from sourceClass where IDNo=? and source_class=? and statusFlag=1");
+	$sth_getmeascat = $dbh->prepare("SELECT distinct meas_category_code,meas_subcategory_code,statusFlag from measCats where IDNo=? order by meas_category_code,meas_subcategory_code");
+	$sth_checkmeas = $dbh->prepare("SELECT count(*),count(*) from measCats where IDNo=? and meas_category_code like ? and meas_subcategory_code like ?");
+	$sth_getprimmeasmetadata1 = $dbh->prepare("SELECT count(*),count(*) from primMeas where IDNo=? and statusFlag != 0");
+	$sth_getprimmeasmetadata2 = $dbh->prepare("SELECT count(*),count(*) from primMeas where IDNo=? and statusFlag = 0");
+	$sth_getpmname1 = $dbh->prepare("SELECT distinct IDNo,primary_meas_code,primary_measurement,var_name from primMeas where IDNo=? and statusFlag != 0 order by primary_meas_code");
+	$sth_getpmname2 = $dbh->prepare("SELECT distinct IDNo,primary_meas_code,primary_measurement,var_name from primMeas where IDNo=? and statusFlag = 0 order by primary_meas_code,primary_measurement");
+	$sth_getcurinstclass = $dbh->prepare("SELECT distinct instrument_class,instrument_class from instClass where IDNo=? order by instrument_class");
+	$sth_getcursourceclass = $dbh->prepare("SELECT distinct source_class,source_class from sourceClass where IDNo=? order by source_class");
+	$sth_checksourceinst = $dbh->prepare("SELECT count(*),count(*) from $archivedb.$instrclasstosourceclass WHERE instrument_class_code=? and source_class_code=?");
+	$sth_checkpminst = $dbh->prepare("SELECT count(*),count(*) from $archivedb.$pmcodetoinstrclass where instrument_class_code=? AND primary_meas_type_code=?");
+	$sth_checkprimmeas = $dbh->prepare("SELECT count(*),count(*) from $archivedb.$dsvarnameinfotab WHERE $archivedb.$dsvarnameinfotab.datastream like ? and $archivedb.$dsvarnameinfotab.primary_meas_type_code=? and $archivedb.$dsvarnameinfotab.primary_measurement=? and $archivedb.$dsvarnameinfotab.var_name=?");
+	$sth_getstatdesc = $dbh->prepare("SELECT status,statusDesc from revStatus where status=?");
+	$sth_getDBstatdesc = $dbh->prepare("SELECT status,statusDesc from status where status=?");
 	while ($getIDs = $sth_getIDs->fetch) {
 		$Idno = $getIDs->[0];
 		$REVstat=$getIDs->[2];
@@ -4035,8 +4073,9 @@ sub displayds
 		$ddentry_date="";
 		$ncomment_date="";
 		$nstatus_date="";
-		$sth_getmaxcommentdate = $dbh->prepare("SELECT commentDate,DATE_PART('year',commentDate),DATE_PART('month',commentDate),DATE_PART('day',commentDate) from comments where IDNo=$Idno and commentDate=(SELECT max(commentDate) from comments where IDNo=$Idno)");
 		if (!defined $sth_getmaxcommentdate) { die "Cannot statement: $DBI::errstr\n"; }
+		$sth_getmaxcommentdate->bind_param(1, $Idno);
+		$sth_getmaxcommentdate->bind_param(2, $Idno);
 		$sth_getmaxcommentdate->execute;
 		while ($getmaxcommentdate = $sth_getmaxcommentdate->fetch) {
 			$comment_date=$getmaxcommentdate->[0];
@@ -4071,8 +4110,9 @@ sub displayds
 				$ncomment_date="";
 			}				
 		}
-		$sth_getmaxstatusdate = $dbh->prepare("SELECT statusDate,DATE_PART('year',statusDate),DATE_PART('month',statusDate),DATE_PART('day',statusDate) from reviewerStatus where IDNo=$Idno and statusDate=(SELECT max(statusDate) from reviewerStatus where IDNo=$Idno)");
 		if (!defined $sth_getmaxstatusdate) { die "Cannot  statement: $DBI::errstr\n"; }
+		$sth_getmaxstatusdate->bind_param(1, $Idno);
+		$sth_getmaxstatusdate->bind_param(2, $Idno);
 		$sth_getmaxstatusdate->execute;
 		while ($getmaxstatusdate = $sth_getmaxstatusdate->fetch) {
 			$status_date=$getmaxstatusdate->[0];
@@ -4107,8 +4147,8 @@ sub displayds
 				$nstatus_date="";
 			}				
 		}
-		$sth_getmaxentrydate = $dbh->prepare("SELECT entry_date,DATE_PART('year',entry_date),DATE_PART('month',entry_date),DATE_PART('day',entry_date) from IDs where IDNo=$Idno");
 		if (!defined $sth_getmaxentrydate) { die "Cannot  statement: $DBI::errstr\n"; }
+		$sth_getmaxentrydate->bind_param(1, $Idno);
 		$sth_getmaxentrydate->execute;
 		while ($getmaxentrydate = $sth_getmaxentrydate->fetch) {
 			$entry_date=$getmaxentrydate->[0];
@@ -4172,8 +4212,8 @@ sub displayds
 		$dsBaseDesc="";
 		$dataLevel="";
 		$DODversion="";		
-		$sth_getDS=$dbh->prepare("SELECT IDNo,dsBase,dsBaseDesc,dataLevel,$peopletab.name_last,$peopletab.name_first,DODversion from DS,$peopletab WHERE DS.submitter=$peopletab.person_id AND DS.IDNo=$Idno");
 		if (!defined $sth_getDS) { die "Cannot  statement: $DBI::errstr\n"; }
+		$sth_getDS->bind_param(1, $Idno);
 		$sth_getDS->execute;
 		while ($getDS = $sth_getDS->fetch) {
 			$exist=0;
@@ -4192,8 +4232,8 @@ sub displayds
 				$exist=1;
 			}
 			$numofcomments=0;
-			$sth_countcomments = $dbh->prepare("SELECT count(*),count(*) from comments where IDNo=$Idno");
 			if (!defined $sth_countcomments) { die "Cannot  statement: $DBI::errstr\n"; }
+			$sth_countcomments->bind_param(1, $Idno);
 			$sth_countcomments->execute;
 			while ($countcomments = $sth_countcomments->fetch) {
 				$numofcomments = $countcomments->[0];
@@ -4209,8 +4249,10 @@ sub displayds
 			$thisdodid="";
 			$thisdodver="";
 			if ($DODversion ne "") {
-				$sth_getdodid=$dbh->prepare("SELECT IDNo,IDNo from DOD where dsBase='$dsBase' and dataLevel='$dataLevel' and DODversion='$DODversion'");
 				if (!defined $sth_getdodid) { die "Cannot  statement: $DBI::errstr\n"; }
+				$sth_getdodid->bind_param(1, $dsBase);
+				$sth_getdodid->bind_param(2, $dataLevel);
+				$sth_getdodid->bind_param(3, $DODversion);
 				$sth_getdodid->execute;
 				while ($getdodid = $sth_getdodid->fetch) {
 					$thisdodid=$getdodid->[0];
@@ -4221,15 +4263,15 @@ sub displayds
 			$thisdodfacs="";
 			if ($thisdodid ne "") {
 				$totfacsthisdod=0;
-				$sth_countdodfac = $dbh->prepare("SELECT count(*) from facilities where IDNo=$thisdodid");
 				if (!defined $sth_countdodfac) { die "Cannot  statement: $DBI::errstr\n"; }
+				$sth_countdodfac->bind_param(1, $thisdodid);
 				$sth_countdodfac->execute;
 				while ($countdodfac = $sth_countdodfac->fetch) {
 					$totfacsthisdod=$countdodfac->[0];
 				}
 				$countdodfacs=0;
-				$sth_getdodfacs = $dbh->prepare("SELECT distinct site,facility_code from facilities where IDNo=$thisdodid");
 				if (!defined $sth_getdodfacs) { die "Cannot  statement: $DBI::errstr\n"; }
+				$sth_getdodfacs->bind_param(1, $thisdodid);
 				$sth_getdodfacs->execute;
 				while ($getdodfacs = $sth_getdodfacs->fetch) {
 					if ($totfacsthisdod > 1) {
@@ -4259,17 +4301,17 @@ sub displayds
 			$countmnt=0;
 			$mentorlist="";
 			$contactinst="";
-			$sth_geti=$dbh->prepare("SELECT distinct instrument_class,instrument_class from instClass where IDNo=$Idno");
 			if (!defined $sth_geti) { die "Cannot  statement: $DBI::errstr\n"; }
+			$sth_geti->bind_param(1, $Idno);
 			$sth_geti->execute;
 			while ($geti = $sth_geti->fetch) {
 				$contactinst=$geti->[0];
 			}
 			if ($contactinst ne "") {		
-				$sth_getmentors = $dbh->prepare("SELECT distinct $grouprole.person_id,name_first,name_last,$grouprole.group_name,$grouprole.role_name,$grouprole.subrole_name from $grouprole,$peopletab WHERE $grouprole.person_id=$peopletab.person_id and $grouprole.role_name=upper('$contactinst') and $grouprole.group_name not like '%Reminder%'");
-				if (!defined $sth_getmentors) { die "Cannot  statement: $DBI::errstr\n"; }
-				$sth_getmentors->execute;
-				while ($getmentors = $sth_getmentors->fetch) {
+				if (!defined $sth_getmentors1) { die "Cannot  statement: $DBI::errstr\n"; }
+				$sth_getmentors1->bind_param(1, $contactinst);
+				$sth_getmentors1->execute;
+				while ($getmentors = $sth_getmentors1->fetch) {
 					if ($countmnt == 0) {
 						$mentorlist = "$getmentors->[1] $getmentors->[2] - $getmentors->[3] $getmentors->[5]";
 					} else {
@@ -4277,10 +4319,11 @@ sub displayds
 					}
 					$countmnt = $countmnt + 1;
 				}
-				$sth_getmentors = $dbh->prepare("SELECT distinct instContacts.contact_id,name_first,name_last,instContacts.group_name,instContacts.role_name,instContacts.subrole_name from instContacts,$peopletab WHERE instContacts.role_name=upper('$contactinst') and instContacts.contact_id=$peopletab.person_id AND instContacts.contact_id not in (SELECT distinct person_id from $grouprole where $grouprole.role_name=upper('$contactinst'))");
-				if (!defined $sth_getmentors) { die "Cannot  statement: $DBI::errstr\n"; }
-				$sth_getmentors->execute;
-				while ($getmentors = $sth_getmentors->fetch) {
+				if (!defined $sth_getmentors2) { die "Cannot  statement: $DBI::errstr\n"; }
+				$sth_getmentors2->bind_param(1, $contactinst);
+				$sth_getmentors2->bind_param(2, $contactinst);
+				$sth_getmentors2->execute;
+				while ($getmentors = $sth_getmentors2->fetch) {
 					if ($countmnt == 0) {
 						$mentorlist = "$getmentors->[1] $getmentors->[2] - $getmentors->[3] $getmentors->[5] <font color=red><strong>*</strong></font>";
 					} else {
@@ -4300,8 +4343,8 @@ sub displayds
 			print "<td>\n";
 			##### instrument category check
 			$countic=0;
-			$sth_getinstcat=$dbh->prepare("SELECT distinct inst_category_code,statusFlag from instCats where IDNo=$Idno order by inst_category_code");
 			if (!defined $sth_getinstcat) { die "Cannot  statement: $DBI::errstr\n"; }
+			$sth_getinstcat->bind_param(1, $Idno);
 			$sth_getinstcat->execute;
 			while ($getinstcat = $sth_getinstcat->fetch) {
 				if ($countic == 0) {
@@ -4313,15 +4356,17 @@ sub displayds
 				}
 			}
 			$matchit=0;
-			$sth_getcurcats = $dbh->prepare("SELECT distinct $archivedb.$sitetoinstrinfotab.instrument_category_code,$archivedb.$sitetoinstrinfotab.instrument_category_code from $archivedb.$sitetoinstrinfotab,$archivedb.$dsinfotab WHERE $archivedb.$sitetoinstrinfotab.instrument_code=$archivedb.$dsinfotab.instrument_code and $archivedb.$sitetoinstrinfotab.instrument_code='$dsBase' and $archivedb.$dsinfotab.data_level_code='$dataLevel' order by $archivedb.$sitetoinstrinfotab.instrument_category_code");
-			if (!defined $sth_getcurcats) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_getcurcats->execute;
-			while ($getcurcats = $sth_getcurcats->fetch) {
+			if (!defined $sth_getcurcats1) { die "Cannot  statement: $DBI::errstr\n"; }
+			$sth_getcurcats1->bind_param(1, $dsBase);
+			$sth_getcurcats1->bind_param(2, $dataLevel);
+			$sth_getcurcats1->execute;
+			while ($getcurcats = $sth_getcurcats1->fetch) {
 				$matchit=0;
-				$sth_checkic = $dbh->prepare("SELECT count(*),count(*) from instCats where IDNo=$getDS->[0] and inst_category_code='$getcurcats->[0]'");
-				if (!defined $sth_checkic) { die "Cannot  statement: $DBI::errstr\n"; }
-				$sth_checkic->execute;
-				while ($checkic = $sth_checkic->fetch) {
+				if (!defined $sth_checkic1) { die "Cannot  statement: $DBI::errstr\n"; }
+				$sth_checkic1->bind_param(1, $getDS->[0]);
+				$sth_checkic1->bind_param(2, $getcurcats->[0]);
+				$sth_checkic1->execute;
+				while ($checkic = $sth_checkic1->fetch) {
 					$matchit=$checkic->[0];
 				}
 				if ($countic > 0) {
@@ -4340,18 +4385,18 @@ sub displayds
 				$ticl="";
 				# check to see if there is an inst category assigned to this instrument class elsewhere
 				$tempclass="";
-				$sth_getinstcl = $dbh->prepare("SELECT distinct IDNo,instrument_class from instClass where IDNo=$getDS->[0] order by IDNo");
-				if (!defined $sth_getinstcl) { die "Cannot  statement: $DBI::errstr\n"; }
-				$sth_getinstcl->execute;
-				while ($getinstcl = $sth_getinstcl->fetch) {
+				if (!defined $sth_getinstcl1) { die "Cannot  statement: $DBI::errstr\n"; }
+				$sth_getinstcl1->bind_param(1, $getDS->[0]);
+				$sth_getinstcl1->execute;
+				while ($getinstcl = $sth_getinstcl1->fetch) {
 					$tempclass=$getinstcl->[1];
 				}
-				$sth_getidsno=$dbh->prepare("SELECT distinct IDNo,instrument_class from instClass where instrument_class='$tempclass'");
 				if (!defined $sth_getidsno) { die "Cannot  statement: $DBI::errstr\n"; }
+				$sth_getidsno->bind_param(1, $tempclass);
 				$sth_getidsno->execute;
 				while ($getidsno = $sth_getidsno->fetch) {
-					$sth_checkicagain = $dbh->prepare("SELECT inst_category_code,inst_category_code from instCats where IDNo=$getidsno->[0]");
 					if (!defined $sth_checkicagain) { die "Cannot  statement: $DBI::errstr\n"; }
+					$sth_checkicagain->bind_param(1, $getidsno->[0]);
 					$sth_checkicagain->execute;
 					while ($checkicagain = $sth_checkicagain->fetch) {
 						$ticl=$checkicagain->[0];
@@ -4360,8 +4405,8 @@ sub displayds
 				if ($ticl ne "") {
 					print "$ticl";
 				} else {
-					$sth_checkarchive=$dbh->prepare("SELECT distinct instrument_category_code,instrument_category_code from $archivedb.$sitetoinstrinfotab where lower(instrument_class_code)=lower('$tempclass')");
 					if (!defined $sth_checkarchive) { die "Cannot  statement: $DBI::errstr\n"; }
+					$sth_checkarchive->bind_param(1, $tempclass);
 					$sth_checkarchive->execute;
 					while ($checkarchive = $sth_checkarchive->fetch) {
 						$ticl=$checkarchive->[0];
@@ -4376,10 +4421,10 @@ sub displayds
 			print "</td><td>\n";
 			##### end instrument category check
 			$countinstc=0;
-			$sth_getinstcl = $dbh->prepare("SELECT distinct instrument_class,statusFlag from instClass where IDNo=$getDS->[0] order by instrument_class");
-			if (!defined $sth_getinstcl) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_getinstcl->execute;
-			while ($getinstcl = $sth_getinstcl->fetch) {
+			if (!defined $sth_getinstcl2) { die "Cannot  statement: $DBI::errstr\n"; }
+			$sth_getinstcl2->bind_param(1, $getDS->[0]);
+			$sth_getinstcl2->execute;
+			while ($getinstcl = $sth_getinstcl2->fetch) {
 				if ($countinstc == 0) {
 					if ($getinstcl->[1] == 0) {
 						print "<font color=red><strong>$getinstcl->[0]</strong></font>";
@@ -4395,15 +4440,16 @@ sub displayds
 				}
 				$countinstc = $countinstc + 1;
 			}
-			$sth_getcurinst = $dbh->prepare("SELECT distinct instrument_code,instrument_class_code from $archivedb.$instrcodetoinstrclasstab where instrument_code='$dsBase' order by instrument_code,instrument_class_code");
 			if (!defined $sth_getcurinst) { die "Cannot  statement: $DBI::errstr\n"; }
+			$sth_getcurinst->bind_param(1, $dsBase);
 			$sth_getcurinst->execute;
 			while ($getcurinst = $sth_getcurinst->fetch) {
 				$matchit=0;
-				$sth_checkic = $dbh->prepare("SELECT count(*),count(*) from instClass where IDNo=$getDS->[0] and instrument_class='$getcurinst->[1]'");
-				if (!defined $sth_checkic) { die "Cannot  statement: $DBI::errstr\n"; }
-				$sth_checkic->execute;
-				while ($checkic = $sth_checkic->fetch) {
+				if (!defined $sth_checkic2) { die "Cannot  statement: $DBI::errstr\n"; }
+				$sth_checkic2->bind_param(1, $getDS->[0]);
+				$sth_checkic2->bind_param(2, $getcurinst->[1]);
+				$sth_checkic2->execute;
+				while ($checkic = $sth_checkic2->fetch) {
 					$matchit = $checkic->[0];
 				}
 				if ($matchit == 0) {
@@ -4423,8 +4469,8 @@ sub displayds
 			print "</td>\n";
 			print "<td>\n";
 			$countsc=0;
-			$sth_getscl = $dbh->prepare("SELECT distinct source_class,statusFlag from sourceClass where IDNo=$getDS->[0] order by source_class");
 			if (!defined $sth_getscl) { die "Cannot  statement: $DBI::errstr\n"; }
+			$sth_getscl->bind_param(1, $getDS->[0]);
 			$sth_getscl->execute;
 			while ($getscl = $sth_getscl->fetch) {
 				if ($countsc == 0) {
@@ -4443,13 +4489,15 @@ sub displayds
 				$countsc = $countsc + 1;
 			}
 			$tempsclist="";
-			$sth_getcursources = $dbh->prepare("SELECT distinct instrument_code,source_class_code,data_level_code from $archivedb.$dsinfotab where instrument_code='$dsBase' and data_level_code='$dataLevel' order by source_class_code");
 			if (!defined $sth_getcursources) { die "Cannot  statement: $DBI::errstr\n"; }
+			$sth_getcursources->bind_param(1, $dsBase);
+			$sth_getcursources->bind_param(2, $dataLevel);
 			$sth_getcursources->execute;
 			while ($getcursources = $sth_getcursources->fetch) {
 				$matchit=0;	
-				$sth_checkcursc = $dbh->prepare("SELECT IDNo,statusFlag from sourceClass where IDNo=$getDS->[0] and source_class='$getcursources->[1]' and statusFlag=1");
 				if (!defined $sth_checkcursc) { die "Cannot  statement: $DBI::errstr\n"; }
+				$sth_checkcursc->bind_param(1, $getDS->[0]);
+				$sth_checkcursc->bind_param(2, $getcursources->[1]);
 				$sth_checkcursc->execute;
 				while ($checkcursc = $sth_checkcursc->fetch) {
 					$matchit = $checkcursc->[0];
@@ -4471,8 +4519,8 @@ sub displayds
 			print " </td>";
 			print "<td>\n";
 			$countmc=0;
-			$sth_getmeascat=$dbh->prepare("SELECT distinct meas_category_code,meas_subcategory_code,statusFlag from measCats where IDNo=$getDS->[0] order by meas_category_code,meas_subcategory_code");
 			if (!defined $sth_getmeascat) { die "Cannot  statement: $DBI::errstr\n"; }
+			$sth_getmeascat->bind_param(1, $getDS->[0]);
 			$sth_getmeascat->execute;
 			while ($getmeascat = $sth_getmeascat->fetch) {
 				if ($countmc == 0) {
@@ -4506,13 +4554,15 @@ sub displayds
 				}
 				$countmc = $countmc + 1;
 			}
-			$sth_getcurcats = $dbh->prepare("SELECT distinct $archivedb.$dsvarnamemeascatstab.meas_category_code,$archivedb.$dsvarnamemeascatstab.meas_category_code,$archivedb.$dsvarnamemeascatstab.meas_subcategory_code from $archivedb.$dsvarnamemeascatstab where $archivedb.$dsvarnamemeascatstab.datastream like '%$dsBase%$dataLevel' order by $archivedb.$dsvarnamemeascatstab.meas_category_code,$archivedb.$dsvarnamemeascatstab.meas_subcategory_code");
-			if (!defined $sth_getcurcats) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_getcurcats->execute;
-			while ($getcurcats = $sth_getcurcats->fetch) {
+			if (!defined $sth_getcurcats2) { die "Cannot  statement: $DBI::errstr\n"; }
+			$sth_getcurcats2->bind_param(1, '%'. $dsBase . '%' . $dataLevel);
+			$sth_getcurcats2->execute;
+			while ($getcurcats = $sth_getcurcats2->fetch) {
 				$matchit=0;
-				$sth_checkmeas = $dbh->prepare("SELECT count(*),count(*) from measCats where IDNo=$getDS->[0] and meas_category_code like '%$getcurcats->[1]%' and meas_subcategory_code like '%$getcurcats->[2]%'");
 				if (!defined $sth_checkmeas) { die "Cannot  statement: $DBI::errstr\n"; }
+				$sth_checkmeas->bind_param(1, $getDS->[0]);
+				$sth_checkmeas->bind_param(2, '%' . $getcurcats->[1] . '%');
+				$sth_checkmeas->bind_param(3, '%' . $getcurcats->[2] . '%');
 				$sth_checkmeas->execute;
 				while ($checkmeas = $sth_checkmeas->fetch) {
 					$matchit=$checkmeas->[0];
@@ -4536,18 +4586,18 @@ sub displayds
 			print "</td>";
 			print "<td>";
 			$countit = 0;		
-			$sth_getprimmeasmetadata=$dbh->prepare("SELECT count(*),count(*) from primMeas where IDNo=$Idno and statusFlag !=0");
-			if (!defined $sth_getprimmeasmetadata) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_getprimmeasmetadata->execute;
-			while ($getprimmeasmetadata = $sth_getprimmeasmetadata->fetch) {			
+			if (!defined $sth_getprimmeasmetadata1) { die "Cannot  statement: $DBI::errstr\n"; }
+			$sth_getprimmeasmetadata1->bind_param(1, $Idno);
+			$sth_getprimmeasmetadata1->execute;
+			while ($getprimmeasmetadata = $sth_getprimmeasmetadata1->fetch) {			
 				if ($getprimmeasmetadata->[0] > 0) {
 					$curpm="";
 					$curprimmeas="";
 					$curvar="";
-					$sth_getpmname=$dbh->prepare("SELECT distinct IDNo,primary_meas_code,primary_measurement,var_name from primMeas where IDNo=$Idno and statusFlag !=0 order by primary_meas_code");
-					if (!defined $sth_getpmname) { die "Cannot  statement: $DBI::errstr\n"; }
-					$sth_getpmname->execute;
-					while ($getpmname = $sth_getpmname->fetch) {
+					if (!defined $sth_getpmname1) { die "Cannot  statement: $DBI::errstr\n"; }
+					$sth_getpmname1->bind_param(1, $Idno);
+					$sth_getpmname1->execute;
+					while ($getpmname = $sth_getpmname1->fetch) {
 						$curpm=$getpmname->[1];
 						$curprimmeas=$getpmname->[2];
 						if ($getpmname->[3] eq "")  {
@@ -4558,32 +4608,37 @@ sub displayds
 						$fincheck=0;
 						$instclassstring="";
 						$originstclassstring="";
-						$sth_getcurinstclass=$dbh->prepare("SELECT distinct instrument_class,instrument_class from instClass where IDNo=$Idno order by instrument_class");
 						if (!defined $sth_getcurinstclass) { die "Cannot  statement: $DBI::errstr\n"; }
+						$sth_getcurinstclass->bind_param(1, $Idno);
 						$sth_getcurinstclass->execute;
 						while ($getcurinstclass = $sth_getcurinstclass->fetch) {
 							$originstclassstring=$getcurinstclass->[0];
 							$instclassstring="%$getcurinstclass->[0]%";
 							$sourceclassstring="";
 							$origsourceclassstring="";
-							$sth_getcursourceclass = $dbh->prepare("SELECT distinct source_class,source_class from sourceClass where IDNo=$Idno order by source_class");
 							if (!defined $sth_getcursourceclass) { die "Cannot  statement: $DBI::errstr\n"; }
+							$sth_getcursourceclass->bind_param(1, $Idno);
 							$sth_getcursourceclass->execute;
 							while ($getcursourceclass = $sth_getcursourceclass->fetch) {
 								$origsourceclassstring=$getcursourceclass->[0];
 								$sourceclassstring = "%$getcursourceclass->[0]%";
-								$sth_checksourceinst=$dbh->prepare("SELECT count(*),count(*) from $archivedb.$instrclasstosourceclass WHERE instrument_class_code='$originstclassstring' and source_class_code='$origsourceclassstring'");
 								if (!defined $sth_checksourceinst) { die "Cannot  statement: $DBI::errstr\n"; }
+								$sth_checksourceinst->bind_param(1, $originstclassstring);
+								$sth_checksourceinst->bind_param(2, $origsourceclassstring);
 								$sth_checksourceinst->execute;
 								while ($checksourceinst = $sth_checksourceinst->fetch) {
 									if ($checksourceinst->[0] > 0) {
-										$sth_checkpminst=$dbh->prepare("SELECT count(*),count(*) from $archivedb.$pmcodetoinstrclass where instrument_class_code='$originstclassstring' AND primary_meas_type_code='$curpm'");
 										if (!defined $sth_checkpminst) { die "Cannot  statement: $DBI::errstr\n"; }
+										$sth_checkpminst->bind_param(1, $originstclassstring);
+										$sth_checkpminst->bind_param(2, $curpm);
 										$sth_checkpminst->execute;
 										while ($checkpminst = $sth_checkpminst->fetch) {
 											if ($checkpminst->[0] > 0) {
-												$sth_checkprimmeas = $dbh->prepare("SELECT count(*),count(*) from $archivedb.$dsvarnameinfotab WHERE $archivedb.$dsvarnameinfotab.datastream like '%$dsBase%' and $archivedb.$dsvarnameinfotab.primary_meas_type_code='$curpm' and $archivedb.$dsvarnameinfotab.primary_measurement='$curprimmeas' and $archivedb.$dsvarnameinfotab.var_name=$curvar");
 												if (!defined $sth_checkprimmeas) { die "Cannot  statement: $DBI::errstr\n"; }
+												$sth_checkprimmeas->bind_param(1, '%' . $dsBase . '%');
+												$sth_checkprimmeas->bind_param(2, $curpm);
+												$sth_checkprimmeas->bind_param(3, $curprimmeas);
+												$sth_checkprimmeas->bind_param(4, $curvar);
 												$sth_checkprimmeas->execute;
 												while ($checkprimmeas = $sth_checkprimmeas->fetch) {
 													if ($checkprimmeas->[0] > 0) {
@@ -4615,15 +4670,15 @@ sub displayds
 					}
 				}
 			}
-			$sth_getprimmeasmetadata=$dbh->prepare("SELECT count(*),count(*) from primMeas where IDNo=$Idno and statusFlag=0");
-			if (!defined $sth_getprimmeasmetadata) { die "Cannot  statement: $DBI::errstr\n"; }
-			$sth_getprimmeasmetadata->execute;
-			while ($getprimmeasmetadata = $sth_getprimmeasmetadata->fetch) {
+			if (!defined $sth_getprimmeasmetadata2) { die "Cannot  statement: $DBI::errstr\n"; }
+			$sth_getprimmeasmetadata2->bind_param(1, $Idno);
+			$sth_getprimmeasmetadata2->execute;
+			while ($getprimmeasmetadata = $sth_getprimmeasmetadata2->fetch) {
 				if ($getprimmeasmetadata->[0] > 0) {
-					$sth_getpmname=$dbh->prepare("SELECT distinct IDNo,primary_meas_code,primary_measurement,var_name from primMeas where IDNo=$Idno and statusFlag=0 order by primary_meas_code,primary_measurement");
-					if (!defined $sth_getpmname) { die "Cannot  statement: $DBI::errstr\n"; }
-					$sth_getpmname->execute;
-					while ($getpmname = $sth_getpmname->fetch) {
+					if (!defined $sth_getpmname2) { die "Cannot  statement: $DBI::errstr\n"; }
+					$sth_getpmname2->bind_param(1, $Idno);
+					$sth_getpmname2->execute;
+					while ($getpmname = $sth_getpmname2->fetch) {
 						if ($countit == 0) {
 							print "<strong><font color=\"red\"><strong>$getpmname->[1]: $getpmname->[3]: $getpmname->[2]</font></strong>\n";
 						} else {
@@ -4639,15 +4694,15 @@ sub displayds
 			print " </td>\n";
 		} 
 		$REVstatdesc="";
-		$sth_getstatdesc=$dbh->prepare("SELECT status,statusDesc from revStatus where status=$REVstat");
 		if (!defined $sth_getstatdesc) { die "Cannot  statement: $DBI::errstr\n"; }
+		$sth_getstatdesc->bind_param(1, $REVstat);
 		$sth_getstatdesc->execute;
 		while ($getstatdesc = $sth_getstatdesc->fetch) {
 			$REVstatdesc=$getstatdesc->[1];
 		}	
 		$DBstatdesc="";
-		$sth_getDBstatdesc=$dbh->prepare("SELECT status,statusDesc from status where status=$DBstat");
 		if (!defined $sth_getDBstatdesc) { die "Cannot  statement: $DBI::errstr\n"; }
+		$sth_getDBstatdesc->bind_param(1, $DBstat);
 		$sth_getDBstatdesc->execute;
 		while ($getDBstatdesc = $sth_getDBstatdesc->fetch) {
 			$DBstatdesc=$getDBstatdesc->[1];
